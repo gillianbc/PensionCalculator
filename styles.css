@@ -49,6 +49,57 @@ header p{margin:0;color:var(--muted)}
 .btn.primary{background:var(--primary);border-color:var(--primary);color:#fff}
 .btn:hover{filter:brightness(0.98)}
 
+.tooltip-container {
+    position: relative;
+    display: inline-block;
+    margin-left: 5px;
+}
+
+.help-icon {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    background-color: #007bff;
+    color: white;
+    border-radius: 50%;
+    text-align: center;
+    line-height: 16px;
+    font-size: 12px;
+    cursor: help;
+}
+
+.tooltip {
+    visibility: hidden;
+    width: 200px;
+    background-color: #333;
+    color: #fff;
+    text-align: left;
+    border-radius: 4px;
+    padding: 8px;
+    position: absolute;
+    z-index: 1;
+    bottom: 125%;
+    left: 50%;
+    margin-left: -100px;
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+.tooltip::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    margin-left: -5px;
+    border-width: 5px;
+    border-style: solid;
+    border-color: #333 transparent transparent transparent;
+}
+
+.tooltip-container:hover .tooltip {
+    visibility: visible;
+}
+
 #report table{width:100%;border-collapse:collapse;margin-top:10px}
 #report th,#report td{border:1px solid #ddd;padding:8px;text-align:right}
 #report th{background:var(--primary);color:#fff;font-weight:bold}

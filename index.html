@@ -10,7 +10,9 @@
 <div class="app-container">
     <header>
         <h1>Pension Strategy Comparison</h1>
-        <p>Run the model entirely in your browser. Enter your parameters and generate a comparison report.</p>
+        <p>Gillian's fabulous pension calculator - I have done my best to calculate this correctly, but no guarantees. Enter your parameters and generate a comparison report.</p>
+        <p>The report shows your total wealth at the end of the year i.e. your savings plus your pension pot.
+            Of course, you have your state pension on top of that if you're eligible and old enough</p>
     </header>
 
     <section class="card">
@@ -18,11 +20,23 @@
         <form id="inputs-form">
             <div class="grid-2">
                 <div class="form-group">
-                    <label for="initialSavings">Initial Savings (£)</label>
+                    <label for="initialSavings">
+                        Initial Savings (£)
+                        <span class="tooltip-container">
+                            <span class="help-icon">?</span>
+                            <span class="tooltip">Enter your current total savings amount in pounds. i.e. current accounts, ISAs, savings accounts, premium bonds</span>
+                        </span>
+                    </label>
                     <input id="initialSavings" type="text" inputmode="decimal" placeholder="74000.00" />
                 </div>
                 <div class="form-group">
-                    <label for="initialPension">Initial Pension (£)</label>
+                    <label for="initialPension">
+                        Initial Pension (£)
+                        <span class="tooltip-container">
+                            <span class="help-icon">?</span>
+                            <span class="tooltip">Enter the total you have in your pension pots in £</span>
+                        </span>
+                    </label>
                     <input id="initialPension" type="text" inputmode="decimal" placeholder="425000.00" />
                 </div>
             </div>
