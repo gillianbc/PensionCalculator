@@ -276,7 +276,7 @@ function strategy3A(savingsP, pensionP, requiredNetP, adhoc, params) {
     if (need < 0) need = 0;
 
     // Pay up to £3,600 gross (net £2,880) from savings into pension if age <= 75
-    if (params.useStrategy3AContribution && age <= 75 && savingsP > 0) {
+    if (age <= 75 && savingsP > 0) {
       const netCap = Math.round(NO_INCOME_CONTRIBUTION_LIMIT_P * (1 - BASIC_RATE)); // 2880
       const netFromSavings = Math.min(savingsP, netCap);
       if (netFromSavings > 0) {
@@ -616,14 +616,12 @@ const getParams = () => {
   const BASIC_RATE = Number(String(el('basicRate').value || '0.20'));
   const BASIC_RATE_BAND_P = toPence(el('basicRateBand').value || '37700.00');
   const NO_INCOME_CONTRIBUTION_LIMIT_P = toPence(el('noIncomeContributionLimit').value || '3600.00');
-  const useStrategy3AContribution = el('useStrategy3AContribution').checked;
 
   return {
     START_AGE, END_AGE,
     PENSION_GROWTH_RATE,
     PERSONAL_ALLOWANCE_P, STATE_PENSION_P,
-    BASIC_RATE, BASIC_RATE_BAND_P, NO_INCOME_CONTRIBUTION_LIMIT_P,
-    useStrategy3AContribution
+    BASIC_RATE, BASIC_RATE_BAND_P, NO_INCOME_CONTRIBUTION_LIMIT_P
   };
 };
 
@@ -654,8 +652,8 @@ const handleGenerate = () => {
 
     // Basic validation of target ages
     for (const a of targetAges) {
-      if (a < params.START_AGE || a > params.END_AGE) {
-        alert(`Target age ${a} must be between ${params.START_AGE} and ${params.END_AGE}.`);
+      if (a < 55 || a > 99) {
+        alert(`Target age ${a} must be between 55 and 99.`);
         return;
       }
     }
