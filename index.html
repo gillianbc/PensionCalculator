@@ -1,16 +1,17 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
+    <meta charset="UTF-8"/>
     <title>Pension Strategy Comparison (Browser)</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="stylesheet" href="styles.css?v=1.0.3" />
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <link rel="stylesheet" href="styles.css?v=1.0.3"/>
 </head>
 <body>
 <div class="app-container">
     <header>
         <h1>Pension Strategy Comparison</h1>
-        <p>Gillian's fabulous pension calculator - I have done my best to calculate this correctly, but no guarantees.</p>
+        <p>Gillian's fabulous pension calculator - I have done my best to calculate this correctly, but no
+            guarantees.</p>
         <p>Enter your parameters and generate a comparison report.</p>
         <p>Press Ctrl-Shift-R to ensure you are using the latest version of this app</p>
         <p>The report shows your total wealth at the end of the year i.e. your savings plus your pension pot.
@@ -29,7 +30,7 @@
                             <span class="tooltip">Enter your current total savings amount in pounds. i.e. current accounts, ISAs, savings accounts, premium bonds</span>
                         </span>
                     </label>
-                    <input id="initialSavings" type="text" inputmode="decimal" placeholder="74000.00" value="100000" />
+                    <input id="initialSavings" type="text" inputmode="decimal" placeholder="74000.00" value="100000"/>
                 </div>
                 <div class="form-group">
                     <label for="initialPension">
@@ -39,7 +40,7 @@
                             <span class="tooltip">Enter the total you have in your pension pots in £</span>
                         </span>
                     </label>
-                    <input id="initialPension" type="text" inputmode="decimal" placeholder="425000.00" value="500000" />
+                    <input id="initialPension" type="text" inputmode="decimal" placeholder="425000.00" value="500000"/>
                 </div>
             </div>
 
@@ -52,7 +53,8 @@
                             <span class="tooltip">How much do you spend a year now?  How much might you spend when retired? Each spending amount is shown as a column in the report</span>
                         </span>
                     </label>
-                    <input id="spendingAmounts" type="text" placeholder="20000.00, 23000.00, 26000.00" value="20000, 25000, 30000, 35000" />
+                    <input id="spendingAmounts" type="text" placeholder="20000.00, 23000.00, 26000.00"
+                           value="20000, 25000, 30000, 35000"/>
                 </div>
                 <div class="form-group">
                     <label for="targetAges">
@@ -62,7 +64,7 @@
                             <span class="tooltip">This controls the blocks that will appear in the report.</span>
                         </span>
                     </label>
-                    <input id="targetAges" type="text" placeholder="67, 75, 99" value="61, 67, 75, 80, 85, 90, 95, 99" />
+                    <input id="targetAges" type="text" placeholder="67, 75, 99" value="61, 67, 75, 80, 85, 90, 95, 99"/>
                 </div>
             </div>
 
@@ -74,7 +76,7 @@
                             <span class="tooltip">Might you need lump sums for a new car, holiday or work on the house?</span>
                         </span>
                 </label>
-                <input id="adhocWithdrawals" type="text" placeholder="62:5000; 70:10000" />
+                <input id="adhocWithdrawals" type="text" placeholder="62:5000; 70:10000"/>
                 <small>Example: 62:5000; 70:10000 adds extra net spending in those ages.</small>
             </div>
 
@@ -82,35 +84,63 @@
                 <summary>Advanced Parameters</summary>
                 <div class="grid-3">
                     <div class="form-group">
-                        <label for="pensionGrowthRate">Pension Growth Rate (decimal)</label>
-                        <input id="pensionGrowthRate" type="text" inputmode="decimal" value="0.04" />
+                        <label for="pensionGrowthRate">
+                            Pension Growth Rate (decimal)
+                            <span class="tooltip-container">
+                                <span class="help-icon">?</span>
+                                <span class="tooltip">e.g. if you expect to get 4% above inflation, enter 0.04</span>
+                            </span>
+                        </label>
+                        <input id="pensionGrowthRate" type="text" inputmode="decimal" value="0.04"/>
                     </div>
 
                     <div class="form-group">
-                        <label for="personalAllowance">Personal Allowance (£)</label>
-                        <input id="personalAllowance" type="text" inputmode="decimal" value="12570.00" />
+                        <label for="personalAllowance">
+                            Personal Allowance (£)
+                            <span class="tooltip-container">
+                                <span class="help-icon">?</span>
+                                <span class="tooltip">In 2025, the threshold before you start paying income tax is £12570</span>
+                            </span>
+                        </label>
+                        <input id="personalAllowance" type="text" inputmode="decimal" value="12570.00"/>
                     </div>
                     <div class="form-group">
-                        <label for="statePension">State Pension (£/yr)</label>
-                        <input id="statePension" type="text" inputmode="decimal" value="11973.00" />
+                        <label for="statePension">
+                            State Pension (£/yr)
+                            <span class="tooltip-container">
+                                <span class="help-icon">?</span>
+                                <span class="tooltip">In 2025, the full state pension is £11973</span>
+                            </span>
+                        </label>
+                        <input id="statePension" type="text" inputmode="decimal" value="11973.00"/>
                     </div>
                     <div class="form-group">
                         <label for="basicRate">Basic Rate (decimal)</label>
-                        <input id="basicRate" type="text" inputmode="decimal" value="0.20" />
+                        <input id="basicRate" type="text" inputmode="decimal" value="0.20"/>
                     </div>
 
                     <div class="form-group">
-                        <label for="basicRateBand">Basic Rate Band Width (£)</label>
-                        <input id="basicRateBand" type="text" inputmode="decimal" value="37700.00" />
+                        <label for="basicRateBand">
+                            Basic Rate Band Width (£)
+                            <span class="tooltip-container">
+                                <span class="help-icon">?</span>
+                                <span class="tooltip">In 2025, you pay nothing on the first £12570 then 20% on the next £37700</span>
+                            </span>
+                        </label>
+                        <input id="basicRateBand" type="text" inputmode="decimal" value="37700.00"/>
                     </div>
                     <div class="form-group">
-                        <label for="noIncomeContributionLimit">No-income Contribution Limit (£ gross)</label>
-                        <input id="noIncomeContributionLimit" type="text" inputmode="decimal" value="3600.00" />
+                        <label for="noIncomeContributionLimit">
+                            No-income Contribution Limit (£ gross)
+                            <span class="tooltip-container">
+                                <span class="help-icon">?</span>
+                                <span class="tooltip">When you're drawing down your pension, you can still add into it from savings.  The limit is 100% of earnings up to 60K, but if you have zero income, you can pay in £3600 gross
+                                    i.e. £2880 from you and £720 governent rebate</span>
+                            </span>
+                        </label>
+                        <input id="noIncomeContributionLimit" type="text" inputmode="decimal" value="3600.00"/>
                     </div>
-                    <div class="form-group checkbox-group">
-                        <input id="useStrategy3AContribution" type="checkbox" checked />
-                        <label for="useStrategy3AContribution">Enable Strategy 3A annual contribution (<= age 75)</label>
-                    </div>
+
                 </div>
             </details>
 
