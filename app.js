@@ -561,7 +561,7 @@ function generateComparisonReport(savings, pension, requiredAmounts, targetAges,
       <table>
         <thead>
           <tr>
-            <th class="strategy-column">Strategy</th>
+            <th class="strategy-column"><span class="strategy-header-text">Strategy</span></th>
             ${requiredAmounts.map(a=>`<th>${formatGBP(a)}</th>`).join('')}
           </tr>
         </thead>
