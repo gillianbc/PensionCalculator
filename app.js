@@ -517,6 +517,14 @@ function generateComparisonReport(savings, pension, requiredAmounts, targetAges,
 
   const strategyRowTitles = ["Strategy1", "Strategy2", "Strategy3", "Strategy3A", "Strategy4", "Strategy5"];
   const strategyClasses = ["strategy-1","strategy-2","strategy-3","strategy-3a","strategy-4","strategy-5"];
+  const strategyDescriptions = [
+    "Use savings first. Then one-off 25% tax-free lump sum into savings. Then drawdown remaining pension when no savings remain (tax rules apply).",
+    "Use savings first, then drawdown from pension (25% tax-free / 75% taxable).",
+    "Drawdown from pension, but keep below tax threshold.  25% is tax free and can drawdown a total of £16760 to keep the 75% below the £12570 threshold (if no state pension) yet.  Use savings to make up the difference. If no savings, drawdown from pension ",
+    "Same as Strategy 3, plus annual £3,600 gross contribution (net £2,880 with 20% relief) at ages ≤ 75.",
+    "Fill personal allowance (0%) then fill basic-rate band (20%)—surplus to savings.",
+    "Drawdown from pension (25% tax-free / 75% taxable). Only use savings if no pension remains."
+  ];
 
   const growthRatePercent = (params.PENSION_GROWTH_RATE * 100).toFixed(2);
 
@@ -561,7 +569,9 @@ function generateComparisonReport(savings, pension, requiredAmounts, targetAges,
     `;
 
     for (let s = 0; s < strategyRowTitles.length; s++) {
-      html += `<tr class="${strategyClasses[s]}"><td class="strategy-column">${strategyRowTitles[s]}</td>`;
+      const rowTitle = strategyRowTitles[s];
+      const rowTooltip = strategyDescriptions[s];
+      html += `<tr class="${strategyClasses[s]}"><td class="strategy-column" title="${rowTooltip}">${rowTitle}</td>`;
       for (let j = 0; j < requiredAmounts.length; j++) {
         const tb = timelinesByAmt[j];
 
@@ -595,12 +605,11 @@ function generateComparisonReport(savings, pension, requiredAmounts, targetAges,
   html += `<div class="footer-block">
     <h3>Strategy Descriptions:</h3>
     <ul>
-      <li><strong>Strategy 1:</strong> Use savings first. Then one-off 25% tax-free lump sum into savings. Then drawdown remaining pension (tax rules apply).</li>
-      <li><strong>Strategy 2:</strong> Use savings first, then UFPLS (25% tax-free / 75% taxable).</li>
-      <li><strong>Strategy 3:</strong> UFPLS within allowance first, use savings to avoid tax, then UFPLS taxed at basic-rate as needed.</li>
-      <li><strong>Strategy 3A:</strong> Same as Strategy 3, plus annual £3,600 gross contribution (net £2,880 with 20% relief) at ages ≤ 75.</li>
-      <li><strong>Strategy 4:</strong> Fill personal allowance (0%) then fill basic-rate band (20%)—surplus to savings.</li>
-      <li><strong>Strategy 5:</strong> Draw primarily from pension using UFPLS; only use savings for shortfall.</li>
+      ${
+        strategyRowTitles.map((title, idx) => 
+          `<li><strong>${title.replace('Strategy', 'Strategy ')}:</strong> ${strategyDescriptions[idx]}</li>`
+        ).join('')
+      }
     </ul>
     <h3>Assumptions</h3>
     <ul>
