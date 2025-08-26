@@ -14,7 +14,7 @@
         <p>Enter your parameters and generate a comparison report.</p>
         <p>Press Ctrl-Shift-R to ensure you are using the latest version of this app</p>
         <p>The report shows your total wealth at the end of the year i.e. your savings plus your pension pot.
-            Of course, you have your state pension on top of that if you're eligible and old enough</p>
+            If you have run out of pensions and savings, you will only have your state pension to live on</p>
     </header>
 
     <section class="card">
@@ -45,17 +45,35 @@
 
             <div class="grid-2">
                 <div class="form-group">
-                    <label for="spendingAmounts">Example Annual Spending Amounts (£, comma separated)</label>
-                    <input id="spendingAmounts" type="text" placeholder="20000.00, 23000.00, 26000.00" value="23000, 25000, 30000, 35000" />
+                    <label for="spendingAmounts">
+                        Example Annual Spending Amounts (£, comma separated)
+                        <span class="tooltip-container">
+                            <span class="help-icon">?</span>
+                            <span class="tooltip">How much do you spend a year now?  How much might you spend when retired? Each spending amount is shown as a column in the report</span>
+                        </span>
+                    </label>
+                    <input id="spendingAmounts" type="text" placeholder="20000.00, 23000.00, 26000.00" value="20000, 25000, 30000, 35000" />
                 </div>
                 <div class="form-group">
-                    <label for="targetAges">Target Ages (comma separated, optional)</label>
+                    <label for="targetAges">
+                        Target Ages (comma separated, optional)
+                        <span class="tooltip-container">
+                            <span class="help-icon">?</span>
+                            <span class="tooltip">This controls the blocks that will appear in the report.</span>
+                        </span>
+                    </label>
                     <input id="targetAges" type="text" placeholder="67, 75, 99" value="61, 67, 75, 80, 85, 90, 95, 99" />
                 </div>
             </div>
 
             <div class="form-group">
-                <label for="adhocWithdrawals">Ad hoc withdrawals (optional: "age:amount; age:amount")</label>
+                <label for="adhocWithdrawals">
+                    Ad hoc withdrawals (optional: "age:amount; age:amount")
+                    <span class="tooltip-container">
+                            <span class="help-icon">?</span>
+                            <span class="tooltip">Might you need lump sums for a new car, holiday or work on the house?</span>
+                        </span>
+                </label>
                 <input id="adhocWithdrawals" type="text" placeholder="62:5000; 70:10000" />
                 <small>Example: 62:5000; 70:10000 adds extra net spending in those ages.</small>
             </div>
