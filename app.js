@@ -564,16 +564,27 @@ function generateComparisonReport(savings, pension, requiredAmounts, targetAges,
       html += `<tr class="${strategyClasses[s]}"><td class="strategy-column">${strategyRowTitles[s]}</td>`;
       for (let j = 0; j < requiredAmounts.length; j++) {
         const tb = timelinesByAmt[j];
-        const cell =
-          s === 0 ? tb.s1[idx].totalEnd() :
-          s === 1 ? tb.s2[idx].totalEnd() :
-          s === 2 ? tb.s3[idx].totalEnd() :
-          s === 3 ? tb.s3a[idx].totalEnd() :
-          s === 4 ? tb.s4[idx].totalEnd() :
-          tb.s5[idx].totalEnd();
+
+        // Get timeline point
+        let timelinePoint;
+        switch (s) {
+          case 0: timelinePoint = tb.s1[idx]; break;
+          case 1: timelinePoint = tb.s2[idx]; break;
+          case 2: timelinePoint = tb.s3[idx]; break;
+          case 3: timelinePoint = tb.s3a[idx]; break;
+          case 4: timelinePoint = tb.s4[idx]; break;
+          case 5: timelinePoint = tb.s5[idx]; break;
+          default: timelinePoint = tb.s1[idx];
+        }
+
+        const cell = timelinePoint.totalEnd();
+        const savings = timelinePoint.savingsEnd;
+        const pension = timelinePoint.pensionEnd;
+
+        const tooltip = `Savings: ${formatGBP(savings)}, Pension: ${formatGBP(pension)}`;
         const isBest = cell === maxForCol[j];
         const extraClass = isBest ? ' best' : '';
-        html += `<td class="currency${extraClass}">${formatGBP(cell)}</td>`;
+        html += `<td class="currency${extraClass}" title="${tooltip}">${formatGBP(cell)}</td>`;
       }
       html += `</tr>`;
     }
