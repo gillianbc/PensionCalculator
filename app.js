@@ -549,7 +549,7 @@ function generateComparisonReport(savings, pension, requiredAmounts, targetAges,
       return m;
     });
 
-    html += `<h2 class="age-title">Results at Age ${age}</h2>
+    html += `<h2 class="age-title">Total wealth remaining at end of year when aged ${age}</h2>
       <table>
         <thead>
           <tr>
@@ -608,8 +608,7 @@ function generateComparisonReport(savings, pension, requiredAmounts, targetAges,
 // UI logic
 const el = (id) => document.getElementById(id);
 const getParams = () => {
-  const START_AGE = Number(el('startAge').value || 61);
-  const END_AGE = Number(el('endAge').value || 99);
+  // START_AGE and END_AGE are set in handleGenerate from target ages
   const PENSION_GROWTH_RATE = Number(String(el('pensionGrowthRate').value || '0.04'));
   const PERSONAL_ALLOWANCE_P = toPence(el('personalAllowance').value || '12570.00');
   const STATE_PENSION_P = toPence(el('statePension').value || '11973.00');
@@ -618,10 +617,10 @@ const getParams = () => {
   const NO_INCOME_CONTRIBUTION_LIMIT_P = toPence(el('noIncomeContributionLimit').value || '3600.00');
 
   return {
-    START_AGE, END_AGE,
     PENSION_GROWTH_RATE,
     PERSONAL_ALLOWANCE_P, STATE_PENSION_P,
     BASIC_RATE, BASIC_RATE_BAND_P, NO_INCOME_CONTRIBUTION_LIMIT_P
+    // START_AGE and END_AGE will be injected by handleGenerate
   };
 };
 
@@ -642,13 +641,21 @@ const handleGenerate = () => {
       ? agesStr.split(',').map(s => Number(s.trim())).filter(n => !Number.isNaN(n))
       : [];
 
-    const adhoc = parseAdhoc(el('adhocWithdrawals').value || '');
-
-    const params = getParams();
-    if (params.END_AGE < params.START_AGE) {
-      alert('End age must be greater than or equal to start age.');
+    if (targetAges.length === 0) {
+      alert('Please provide at least one target age.');
       return;
     }
+
+    const adhoc = parseAdhoc(el('adhocWithdrawals').value || '');
+
+    // Automatically determine START_AGE and END_AGE
+    const START_AGE = Math.min(...targetAges);
+    const END_AGE = Math.max(...targetAges);
+
+    // Get other params as usual
+    const params = getParams();
+    params.START_AGE = START_AGE;
+    params.END_AGE = END_AGE;
 
     // Basic validation of target ages
     for (const a of targetAges) {
