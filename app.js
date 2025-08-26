@@ -666,7 +666,16 @@ const handleGenerate = () => {
       return;
     }
 
-    const adhoc = parseAdhoc(el('adhocWithdrawals').value || '');
+    // Gather ad hoc withdrawals from new UI
+    const adhoc = {};
+    const adhocRowsEls = document.querySelectorAll('.adhoc-row');
+    adhocRowsEls.forEach((row) => {
+      const age = Number(row.querySelector('.adhoc-age').dataset.value);
+      const amount = Number(row.querySelector('.adhoc-amount').dataset.value);
+      if (!Number.isNaN(age) && age > 0 && !Number.isNaN(amount) && amount >= 0) {
+        adhoc[age] = toPence(amount);
+      }
+    });
 
     // Automatically determine START_AGE and END_AGE
     const START_AGE = Math.min(...targetAges);
@@ -744,4 +753,104 @@ const handleDownload = () => {
 window.addEventListener('DOMContentLoaded', () => {
   el('generateBtn').addEventListener('click', handleGenerate);
   el('downloadBtn').addEventListener('click', handleDownload);
+
+  // --- Ad hoc withdrawals UI logic ---
+  const adhocRowsDiv = document.getElementById('adhocRows');
+  const addAdhocBtn = document.getElementById('addAdhocBtn');
+  const adhocAgeEl = document.getElementById('adhocAge');
+  const adhocAmountEl = document.getElementById('adhocAmount');
+
+  // Set min and max for Age control based on Target Ages
+  const targetAgesEl = document.getElementById('targetAges');
+  function updateAdhocAgeRange() {
+    const val = targetAgesEl.value || '';
+    const ages = val.split(',').map(s => Number(s.trim())).filter(a => !Number.isNaN(a));
+    if (ages.length > 0) {
+      const min = Math.min(...ages);
+      const max = Math.max(...ages);
+      adhocAgeEl.min = min;
+      adhocAgeEl.max = max;
+      adhocAgeEl.placeholder = `Age (${min}-${max})`;
+      // If the current value is out of new bounds, clear it
+      if (adhocAgeEl.value && (Number(adhocAgeEl.value) < min || Number(adhocAgeEl.value) > max)) {
+        adhocAgeEl.value = '';
+      }
+    } else {
+      adhocAgeEl.min = 0;
+      adhocAgeEl.max = 120;
+      adhocAgeEl.placeholder = "Age";
+    }
+  }
+  // Initial setup and change listener
+  updateAdhocAgeRange();
+  targetAgesEl.addEventListener('input', updateAdhocAgeRange);
+
+  function renderAdhocRows() {
+    // Just update the display, nothing to do here since rows are directly managed
+    // Could later add empty-message if needed
+  }
+
+  function removeAdhocRow(rowEl) {
+    rowEl.parentNode.removeChild(rowEl);
+    renderAdhocRows();
+  }
+
+  addAdhocBtn.addEventListener('click', () => {
+    const age = Number(adhocAgeEl.value);
+    const amount = Number(adhocAmountEl.value);
+    // check using currently set min/max
+    if (
+      Number.isNaN(age) ||
+      (adhocAgeEl.min && age < Number(adhocAgeEl.min)) ||
+      (adhocAgeEl.max && age > Number(adhocAgeEl.max))
+    ) {
+      alert(`Please enter a valid age (${adhocAgeEl.min}–${adhocAgeEl.max}).`);
+      return;
+    }
+    if (Number.isNaN(amount) || amount < 0) {
+      alert('Please enter a valid amount (in £, 0 or positive).');
+      return;
+    }
+    // Don't allow duplicate ages
+    if ([...adhocRowsDiv.querySelectorAll('.adhoc-age')].some(e => Number(e.dataset.value) === age)) {
+      alert('Age already added. Remove the row to change or add a different pair.');
+      return;
+    }
+
+    // Create a row
+    const row = document.createElement('div');
+    row.className = 'adhoc-row';
+    row.style.display = 'flex';
+    row.style.alignItems = 'center';
+    row.style.marginBottom = '3px';
+    // Age
+    const ageSpan = document.createElement('span');
+    ageSpan.textContent = `Age ${age}`;
+    ageSpan.className = 'adhoc-age';
+    ageSpan.dataset.value = age;
+    ageSpan.style.width = "70px";
+    // Amount
+    const amtSpan = document.createElement('span');
+    amtSpan.textContent = `£${Number(amount).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}`;
+    amtSpan.className = 'adhoc-amount';
+    amtSpan.dataset.value = amount;
+    amtSpan.style.width = "110px";
+    amtSpan.style.marginLeft = "8px";
+    // Remove button
+    const delBtn = document.createElement('button');
+    delBtn.textContent = 'Remove';
+    delBtn.type = 'button';
+    delBtn.className = 'adhoc-remove-btn';
+    delBtn.style.marginLeft = "10px";
+    delBtn.addEventListener('click', () => removeAdhocRow(row));
+    // Row composition
+    row.appendChild(ageSpan);
+    row.appendChild(amtSpan);
+    row.appendChild(delBtn);
+
+    adhocRowsDiv.appendChild(row);
+    adhocAgeEl.value = '';
+    adhocAmountEl.value = '';
+    renderAdhocRows();
+  });
 });

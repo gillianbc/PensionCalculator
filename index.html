@@ -16,6 +16,8 @@
         <p>Press Ctrl-Shift-R to ensure you are using the latest version of this app</p>
         <p>The report shows your total wealth at the end of the year i.e. your savings plus your pension pot.
             If you have run out of pensions and savings, you will only have your state pension to live on</p>
+        <br>
+        <p>Hover over a value in the report to see the split between savings and pension</p>
     </header>
 
     <section class="card">
@@ -69,15 +71,26 @@
             </div>
 
             <div class="form-group">
-                <label for="adhocWithdrawals">
-                    Ad hoc withdrawals (optional: "age:amount; age:amount")
+                <label>
+                    Ad hoc withdrawals (optional)
                     <span class="tooltip-container">
-                            <span class="help-icon">?</span>
-                            <span class="tooltip">Might you need lump sums for a new car, holiday or work on the house?</span>
-                        </span>
+                        <span class="help-icon">?</span>
+                        <span class="tooltip">Add any extra net spending in specific years, such as lump sums for a new car or holiday. Click 'Add' for each withdrawal. Use 'Remove' to delete a row.</span>
+                    </span>
                 </label>
-                <input id="adhocWithdrawals" type="text" placeholder="62:5000; 70:10000"/>
-                <small>Example: 62:5000; 70:10000 adds extra net spending in those ages.</small>
+                <div id="adhocWithdrawalsSection" style="margin-top:6px;">
+                    <div id="adhocRows"></div>
+                    <div style="margin-top:8px; display:flex; gap:8px; align-items:center;">
+                        <span style="font-weight:600;">At age</span>
+                        <input type="number" min="0" max="120" id="adhocAge" placeholder="Age" style="width:110px;">
+                        <span style="font-weight:600;">lump sum</span>
+                        <input type="number" min="0" id="adhocAmount" placeholder="Amount (£)" style="width:110px;">
+                        <button type="button" id="addAdhocBtn" style="margin-left:6px;">Add</button>
+                    </div>
+                    <div style="color:#888; font-size:0.98em; margin-top:5px;">
+                        Example: age 62, £5000. Add as many pairs as needed. Withdrawals are added to annual net spending for those years.
+                    </div>
+                </div>
             </div>
 
             <details class="advanced">
@@ -157,6 +170,6 @@
     </section>
 </div>
 
-<script src="app.js"></script>
+<script src="app.js"></script>Fz
 </body>
 </html>
