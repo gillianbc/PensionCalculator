@@ -29,7 +29,7 @@
                         Initial Savings (£)
                         <span class="tooltip-container">
                             <span class="help-icon">?</span>
-                            <span class="tooltip">Enter your current total savings amount in pounds. i.e. current accounts, ISAs, savings accounts, premium bonds</span>
+                            <span class="tooltip">Enter your total savings amount in pounds. i.e. current accounts, ISAs, savings accounts, premium bonds</span>
                         </span>
                     </label>
                     <input id="initialSavings" type="text" inputmode="decimal" placeholder="74000.00" value="100000"/>
@@ -63,7 +63,7 @@
                         Target Ages (comma separated, optional)
                         <span class="tooltip-container">
                             <span class="help-icon">?</span>
-                            <span class="tooltip">This controls the blocks that will appear in the report.</span>
+                            <span class="tooltip">This controls the blocks that will appear in the report.  The first age entered is the start age for the calculations i.e. the age you are relative to the initial savings and pension figures.</span>
                         </span>
                     </label>
                     <input id="targetAges" type="text" placeholder="67, 75, 99" value="61, 67, 75, 80, 85, 90, 95, 99"/>
@@ -152,6 +152,17 @@
                             </span>
                         </label>
                         <input id="noIncomeContributionLimit" type="text" inputmode="decimal" value="3600.00"/>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="statePensionAge">
+                            State Pension Age
+                            <span class="tooltip-container">
+                                <span class="help-icon">?</span>
+                                <span class="tooltip">The age at which you are eligible to draw your State Pension. Default is 67. You can set any age from 65 to 80.</span>
+                            </span>
+                        </label>
+                        <input id="statePensionAge" type="number" min="65" max="80" value="67" />
                     </div>
 
                 </div>
