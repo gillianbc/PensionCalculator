@@ -62,9 +62,9 @@ function strategy1(savingsP, pensionP, requiredNetP, adhoc, params) {
     savingsP -= fromSavings;
     need -= fromSavings;
 
-    // One-time lump sum: 25% of pension into savings if still needed
+    // One-time lump sum: configurable tax-free portion of pension into savings if still needed
     if (need > 0 && !lumpSumTaken && pensionP > 0) {
-      const lump = Math.round(pensionP * 0.25);
+      const lump = Math.round(pensionP * (typeof params.TAX_FREE_PORTION === 'number' ? params.TAX_FREE_PORTION : 0.25));
       pensionP -= lump;
       savingsP += lump;
       lumpSumTaken = true;
@@ -116,8 +116,8 @@ function strategy1(savingsP, pensionP, requiredNetP, adhoc, params) {
 
 function strategy2(savingsP, pensionP, requiredNetP, adhoc, params) {
   const { START_AGE, END_AGE, STATE_PENSION_P, PERSONAL_ALLOWANCE_P, BASIC_RATE, PENSION_GROWTH_RATE } = params;
-  const TAX_FREE_PORTION = 0.25, TAXED_PORTION = 0.75;
-  const NET_FACTOR = TAX_FREE_PORTION + TAXED_PORTION * (1 - BASIC_RATE); // 0.85
+  const TAX_FREE_PORTION = (typeof params.TAX_FREE_PORTION === 'number' ? params.TAX_FREE_PORTION : 0.25), TAXED_PORTION = 1 - TAX_FREE_PORTION;
+  const NET_FACTOR = TAX_FREE_PORTION + TAXED_PORTION * (1 - BASIC_RATE);
 
   const len = END_AGE - START_AGE + 1;
   const timeline = new Array(len);
@@ -180,8 +180,8 @@ function strategy2(savingsP, pensionP, requiredNetP, adhoc, params) {
 
 function strategy3(savingsP, pensionP, requiredNetP, adhoc, params) {
   const { START_AGE, END_AGE, STATE_PENSION_P, PERSONAL_ALLOWANCE_P, BASIC_RATE, PENSION_GROWTH_RATE } = params;
-  const TAX_FREE_PORTION = 0.25, TAXED_PORTION = 0.75;
-  const NET_FACTOR = TAX_FREE_PORTION + TAXED_PORTION * (1 - BASIC_RATE); // 0.85
+  const TAX_FREE_PORTION = (typeof params.TAX_FREE_PORTION === 'number' ? params.TAX_FREE_PORTION : 0.25), TAXED_PORTION = 1 - TAX_FREE_PORTION;
+  const NET_FACTOR = TAX_FREE_PORTION + TAXED_PORTION * (1 - BASIC_RATE);
 
   const len = END_AGE - START_AGE + 1;
   const timeline = new Array(len);
@@ -258,8 +258,8 @@ function strategy3(savingsP, pensionP, requiredNetP, adhoc, params) {
 
 function strategy3A(savingsP, pensionP, requiredNetP, adhoc, params) {
   const { START_AGE, END_AGE, STATE_PENSION_P, PERSONAL_ALLOWANCE_P, BASIC_RATE, PENSION_GROWTH_RATE, NO_INCOME_CONTRIBUTION_LIMIT_P } = params;
-  const TAX_FREE_PORTION = 0.25, TAXED_PORTION = 0.75;
-  const NET_FACTOR = TAX_FREE_PORTION + TAXED_PORTION * (1 - BASIC_RATE); // 0.85
+  const TAX_FREE_PORTION = (typeof params.TAX_FREE_PORTION === 'number' ? params.TAX_FREE_PORTION : 0.25), TAXED_PORTION = 1 - TAX_FREE_PORTION;
+  const NET_FACTOR = TAX_FREE_PORTION + TAXED_PORTION * (1 - BASIC_RATE);
   const len = END_AGE - START_AGE + 1;
   const timeline = new Array(len);
 
@@ -344,7 +344,7 @@ function strategy3A(savingsP, pensionP, requiredNetP, adhoc, params) {
 
 function strategy4(savingsP, pensionP, requiredNetP, adhoc, params) {
   const { START_AGE, END_AGE, STATE_PENSION_P, PERSONAL_ALLOWANCE_P, BASIC_RATE, BASIC_RATE_BAND_P, PENSION_GROWTH_RATE } = params;
-  const TAX_FREE_PORTION = 0.25, TAXED_PORTION = 0.75;
+  const TAX_FREE_PORTION = (typeof params.TAX_FREE_PORTION === 'number' ? params.TAX_FREE_PORTION : 0.25), TAXED_PORTION = 1 - TAX_FREE_PORTION;
 
   const len = END_AGE - START_AGE + 1;
   const timeline = new Array(len);
@@ -434,8 +434,8 @@ function strategy4(savingsP, pensionP, requiredNetP, adhoc, params) {
 
 function strategy5(savingsP, pensionP, requiredNetP, adhoc, params) {
   const { START_AGE, END_AGE, STATE_PENSION_P, PERSONAL_ALLOWANCE_P, BASIC_RATE, PENSION_GROWTH_RATE } = params;
-  const TAX_FREE_PORTION = 0.25, TAXED_PORTION = 0.75;
-  const NET_FACTOR = TAX_FREE_PORTION + TAXED_PORTION * (1 - BASIC_RATE); // 0.85
+  const TAX_FREE_PORTION = (typeof params.TAX_FREE_PORTION === 'number' ? params.TAX_FREE_PORTION : 0.25), TAXED_PORTION = 1 - TAX_FREE_PORTION;
+  const NET_FACTOR = TAX_FREE_PORTION + TAXED_PORTION * (1 - BASIC_RATE);
 
   const len = END_AGE - START_AGE + 1;
   const timeline = new Array(len);
@@ -635,11 +635,13 @@ const getParams = () => {
   const BASIC_RATE = Number(String(el('basicRate').value || '0.20'));
   const BASIC_RATE_BAND_P = toPence(el('basicRateBand').value || '37700.00');
   const NO_INCOME_CONTRIBUTION_LIMIT_P = toPence(el('noIncomeContributionLimit').value || '3600.00');
+  const TAX_FREE_PORTION = Number(String(el('taxFreePortion').value || '0.25'));
 
   return {
     PENSION_GROWTH_RATE,
     PERSONAL_ALLOWANCE_P, STATE_PENSION_P,
-    BASIC_RATE, BASIC_RATE_BAND_P, NO_INCOME_CONTRIBUTION_LIMIT_P
+    BASIC_RATE, BASIC_RATE_BAND_P, NO_INCOME_CONTRIBUTION_LIMIT_P,
+    TAX_FREE_PORTION
     // START_AGE and END_AGE will be injected by handleGenerate
   };
 };
