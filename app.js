@@ -517,13 +517,15 @@ function generateComparisonReport(savings, pension, requiredAmounts, targetAges,
 
   const strategyRowTitles = ["Strategy1", "Strategy2", "Strategy3", "Strategy3A", "Strategy4", "Strategy5"];
   const strategyClasses = ["strategy-1","strategy-2","strategy-3","strategy-3a","strategy-4","strategy-5"];
+  const tfpPct = Math.round(((typeof params.TAX_FREE_PORTION === 'number' ? params.TAX_FREE_PORTION : 0.25)) * 100);
+  const taxedPct = 100 - tfpPct;
   const strategyDescriptions = [
-    "Use savings first. Then one-off 25% tax-free lump sum into savings. Then drawdown remaining pension when no savings remain (tax rules apply).",
-    "Use savings first, then drawdown from pension (25% tax-free / 75% taxable).",
-    "Drawdown from pension, but keep below tax threshold.  25% is tax free and can drawdown a total of £16760 to keep the 75% below the £12570 threshold (if no state pension) yet.  Use savings to make up the difference. If no savings, drawdown from pension ",
+    `Use savings first. Then one-off ${tfpPct}% tax-free lump sum into savings. Then drawdown remaining pension when no savings remain (tax rules apply).`,
+    `Use savings first, then drawdown from pension (${tfpPct}% tax-free / ${taxedPct}% taxable).`,
+    `Draw down from pension, but aim to keep the taxable portion within your personal allowance after state pension. The tax-free portion is ${tfpPct}%. Use savings to make up any remaining need; if none, continue drawing from pension (basic-rate tax may apply).`,
     "Same as Strategy 3, plus annual £3,600 gross contribution (net £2,880 with 20% relief) at ages ≤ 75.",
     "Fill personal allowance (0%) then fill basic-rate band (20%)—surplus to savings.",
-    "Drawdown from pension (25% tax-free / 75% taxable). Only use savings if no pension remains."
+    `Drawdown from pension (${tfpPct}% tax-free / ${taxedPct}% taxable). Only use savings if no pension remains.`
   ];
 
   const growthRatePercent = (params.PENSION_GROWTH_RATE * 100).toFixed(2);
@@ -617,6 +619,7 @@ function generateComparisonReport(savings, pension, requiredAmounts, targetAges,
       <li><strong>Personal allowance:</strong> ${formatGBP(params.PERSONAL_ALLOWANCE_P)}</li>
       <li><strong>State pension (annual):</strong> ${formatGBP(params.STATE_PENSION_P)}</li>
       <li><strong>Basic-rate band width:</strong> ${formatGBP(params.BASIC_RATE_BAND_P)}</li>
+      <li><strong>Tax-free pension portion:</strong> ${(params.TAX_FREE_PORTION * 100).toFixed(0)}%</li>
       <li><strong>Savings interest:</strong> None (and no inflation either)</li>
     </ul>
     <p><em>Generated on: ${new Date().toISOString().replace('T',' ').slice(0,19)}</em></p>

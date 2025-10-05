@@ -19,3 +19,7 @@ All these questions can be modelled by this app.
 The interest on pension funds is assumed to by 4% above inflation.  The interest on savings is assumed to be 0, but no inflation either.  
 So the figures are a rough approximation in today's money after taking inflation into account. 
 
+TODO
+----
+Since I can put savings into Stocks and Shares ISA, which I expect to perform better than inflation, i.e. comparable with SIPP, I should configure an interest rate on the amount that is in my ISA savings.  I can only add £20000 per year to ISA.  
+
