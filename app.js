@@ -592,8 +592,9 @@ function generateComparisonReport(savings, pension, requiredAmounts, targetAges,
         const cell = timelinePoint.totalEnd();
         const savings = timelinePoint.savingsEnd;
         const pension = timelinePoint.pensionEnd;
+        const taxPaid = timelinePoint.taxPaid;
 
-        const tooltip = `Savings: ${formatGBP(savings)}, Pension: ${formatGBP(pension)}`;
+        const tooltip = `Savings: ${formatGBP(savings)}, Pension: ${formatGBP(pension)}, Tax paid: ${formatGBP(taxPaid)}`;
         const isBest = cell === maxForCol[j];
         const extraClass = isBest ? ' best' : '';
         html += `<td class="currency${extraClass}" title="${tooltip}">${formatGBP(cell)}</td>`;
