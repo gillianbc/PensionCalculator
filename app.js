@@ -499,6 +499,121 @@ function strategy5(savingsP, pensionP, requiredNetP, adhoc, params) {
 }
 
 // Report builder
+
+// Collapsible top-of-page Strategy Info builder
+function buildStrategyInfoInnerHTML(strategyRowTitles, strategyDescriptions, params) {
+  const growthRatePercent = (params.PENSION_GROWTH_RATE * 100).toFixed(2);
+  return `
+    <h3>Strategy Descriptions:</h3>
+    <ul>
+      ${strategyRowTitles.map((title, idx) =>
+        `<li><strong>${title.replace('Strategy', 'Strategy ')}:</strong> ${strategyDescriptions[idx]}</li>`
+      ).join('')}
+    </ul>
+    <h3>Assumptions</h3>
+    <ul>
+      <li><strong>Pension growth rate above inflation:</strong> ${growthRatePercent}%</li>
+      <li><strong>Personal allowance:</strong> ${formatGBP(params.PERSONAL_ALLOWANCE_P)}</li>
+      <li><strong>State pension (annual):</strong> ${formatGBP(params.STATE_PENSION_P)}</li>
+      <li><strong>Basic-rate band width:</strong> ${formatGBP(params.BASIC_RATE_BAND_P)}</li>
+      <li><strong>Tax-free pension portion:</strong> ${(params.TAX_FREE_PORTION * 100).toFixed(0)}%</li>
+      <li><strong>Savings interest:</strong> None (and no inflation either)</li>
+    </ul>
+    <p><em>Generated on: ${new Date().toISOString().replace('T',' ').slice(0,19)}</em></p>
+  `.trim();
+}
+
+function updateStrategyInfoPanel(strategyRowTitles, strategyDescriptions, params) {
+  if (typeof document === 'undefined') return;
+  const reportDiv = document.getElementById('report');
+
+  // Try to find the "Advanced Parameters" section to insert above it
+  function findAdvancedParamsAnchor() {
+    const byId = document.getElementById('advancedParameters') || document.getElementById('advancedParams');
+    if (byId) return byId;
+
+    // Look for a <details> (or similar) whose <summary> contains "Advanced Parameters"
+    const candidates = Array.from(document.querySelectorAll('details, .advanced-params, .advanced-parameters'));
+    for (const el of candidates) {
+      const sum = el.querySelector('summary');
+      const txt = sum ? sum.textContent.trim().toLowerCase() : '';
+      if (txt.includes('advanced parameters')) return el;
+    }
+
+    // Fallback: any heading mentioning Advanced Parameters
+    const headings = Array.from(document.querySelectorAll('h1,h2,h3,h4,h5'));
+    for (const h of headings) {
+      const txt = (h.textContent || '').trim().toLowerCase();
+      if (txt.includes('advanced parameters')) return h;
+    }
+
+    return null;
+  }
+
+  let details = document.getElementById('strategyInfoPanel');
+  if (!details) {
+    details = document.createElement('details');
+    details.id = 'strategyInfoPanel';
+    details.className = 'advanced';
+    details.open = false; // default hidden (closed)
+
+    const summary = document.createElement('summary');
+    summary.textContent = 'Additional Information';
+
+    const content = document.createElement('div');
+    content.className = 'strategy-info-content';
+    content.innerHTML = buildStrategyInfoInnerHTML(strategyRowTitles, strategyDescriptions, params);
+
+    details.appendChild(summary);
+    details.appendChild(content);
+
+    const anchor = findAdvancedParamsAnchor();
+    if (anchor && anchor.parentNode) {
+      anchor.parentNode.insertBefore(details, anchor);
+    } else if (reportDiv && reportDiv.parentNode) {
+      reportDiv.parentNode.insertBefore(details, reportDiv);
+    } else {
+      document.body.prepend(details);
+    }
+  } else {
+    const content = details.querySelector('.strategy-info-content');
+    if (content) {
+      content.innerHTML = buildStrategyInfoInnerHTML(strategyRowTitles, strategyDescriptions, params);
+    }
+    // Ensure it's positioned above Advanced Parameters if possible
+    const anchor = findAdvancedParamsAnchor();
+    if (anchor && anchor.parentNode && details.previousSibling !== anchor) {
+      anchor.parentNode.insertBefore(details, anchor);
+    }
+    // Ensure summary label
+    const summary = details.querySelector('summary');
+    if (summary) summary.textContent = 'Additional Information';
+  }
+}
+
+// Titles/classes/descriptions provider reused by both report and the panel
+function getStrategyMeta(params) {
+  const tfpPct = Math.round(((typeof params.TAX_FREE_PORTION === 'number' ? params.TAX_FREE_PORTION : 0.25)) * 100);
+  const taxedPct = 100 - tfpPct;
+  return {
+    strategyRowTitles: ["Strategy1", "Strategy2", "Strategy3", "Strategy3A", "Strategy4", "Strategy5"],
+    strategyClasses: ["strategy-1","strategy-2","strategy-3","strategy-3a","strategy-4","strategy-5"],
+    strategyDescriptions: [
+      `Use savings first. Then one-off ${tfpPct}% tax-free lump sum into savings. 
+      Then drawdown remaining pension when no savings remain (tax rules apply).
+      For example: Want to spend £30K per year.  Have  £10K savings, £100K pension.  Take lump sum of £25K in first year.  
+      So £5K savings remains at end of year 1 and £75K pension plus growth, but there is no more tax free portion.`,
+      `Use savings first, then drawdown from pension (${tfpPct}% tax-free / ${taxedPct}% taxable).
+      For example: Want to spend £30K per year.  Have  £10K savings, £100K pension.  
+      Spend £10K savings then need another £20K net from pension.  Have to drawdown more than £20K to get £20K net.`,
+      `Draw down from pension, but aim to keep the taxable portion within your personal allowance after state pension. The tax-free portion is ${tfpPct}%. Use savings to make up any remaining need; if none, continue drawing from pension (basic-rate tax may apply).`,
+      "Same as Strategy 3, plus annual £3,600 gross contribution (net £2,880 with 20% relief) at ages ≤ 75.",
+      "Fill personal allowance (0%) then fill basic-rate band (20%)—surplus to savings.",
+      `Drawdown from pension (${tfpPct}% tax-free / ${taxedPct}% taxable). Only use savings if no pension remains.`
+    ]
+  };
+}
+
 function generateComparisonReport(savings, pension, requiredAmounts, targetAges, adhoc, params) {
   const len = params.END_AGE - params.START_AGE + 1;
 
@@ -515,18 +630,7 @@ function generateComparisonReport(savings, pension, requiredAmounts, targetAges,
 
   const agesToUse = (targetAges && targetAges.length > 0) ? targetAges : [params.END_AGE];
 
-  const strategyRowTitles = ["Strategy1", "Strategy2", "Strategy3", "Strategy3A", "Strategy4", "Strategy5"];
-  const strategyClasses = ["strategy-1","strategy-2","strategy-3","strategy-3a","strategy-4","strategy-5"];
-  const tfpPct = Math.round(((typeof params.TAX_FREE_PORTION === 'number' ? params.TAX_FREE_PORTION : 0.25)) * 100);
-  const taxedPct = 100 - tfpPct;
-  const strategyDescriptions = [
-    `Use savings first. Then one-off ${tfpPct}% tax-free lump sum into savings. Then drawdown remaining pension when no savings remain (tax rules apply).`,
-    `Use savings first, then drawdown from pension (${tfpPct}% tax-free / ${taxedPct}% taxable).`,
-    `Draw down from pension, but aim to keep the taxable portion within your personal allowance after state pension. The tax-free portion is ${tfpPct}%. Use savings to make up any remaining need; if none, continue drawing from pension (basic-rate tax may apply).`,
-    "Same as Strategy 3, plus annual £3,600 gross contribution (net £2,880 with 20% relief) at ages ≤ 75.",
-    "Fill personal allowance (0%) then fill basic-rate band (20%)—surplus to savings.",
-    `Drawdown from pension (${tfpPct}% tax-free / ${taxedPct}% taxable). Only use savings if no pension remains.`
-  ];
+  const { strategyRowTitles, strategyClasses, strategyDescriptions } = getStrategyMeta(params);
 
   const growthRatePercent = (params.PENSION_GROWTH_RATE * 100).toFixed(2);
 
@@ -605,26 +709,10 @@ function generateComparisonReport(savings, pension, requiredAmounts, targetAges,
     html += `</tbody></table>`;
   }
 
-  html += `<div class="footer-block">
-    <h3>Strategy Descriptions:</h3>
-    <ul>
-      ${
-        strategyRowTitles.map((title, idx) => 
-          `<li><strong>${title.replace('Strategy', 'Strategy ')}:</strong> ${strategyDescriptions[idx]}</li>`
-        ).join('')
-      }
-    </ul>
-    <h3>Assumptions</h3>
-    <ul>
-      <li><strong>Pension growth rate above inflation:</strong> ${growthRatePercent}%</li>
-      <li><strong>Personal allowance:</strong> ${formatGBP(params.PERSONAL_ALLOWANCE_P)}</li>
-      <li><strong>State pension (annual):</strong> ${formatGBP(params.STATE_PENSION_P)}</li>
-      <li><strong>Basic-rate band width:</strong> ${formatGBP(params.BASIC_RATE_BAND_P)}</li>
-      <li><strong>Tax-free pension portion:</strong> ${(params.TAX_FREE_PORTION * 100).toFixed(0)}%</li>
-      <li><strong>Savings interest:</strong> None (and no inflation either)</li>
-    </ul>
-    <p><em>Generated on: ${new Date().toISOString().replace('T',' ').slice(0,19)}</em></p>
-  </div>`;
+  // Update the top Strategy Info panel instead of rendering it in the report footer
+  if (typeof document !== 'undefined') {
+    updateStrategyInfoPanel(strategyRowTitles, strategyDescriptions, params);
+  }
 
   return html;
 }
@@ -718,6 +806,10 @@ const handleDownload = () => {
   const params = getParams();
   const growthRatePercent = (params.PENSION_GROWTH_RATE * 100).toFixed(2);
 
+  // Include the top strategy info panel in the download as well
+  const infoPanelEl = document.getElementById('strategyInfoPanel');
+  const infoPanelHtml = infoPanelEl ? infoPanelEl.outerHTML : '';
+
   // Compose a standalone HTML file with inline styles (reuse styles.css link)
   const fullHtml = `
 <!DOCTYPE html>
@@ -735,6 +827,7 @@ const handleDownload = () => {
 <div class="app-container">
   <div class="card">
     <h1>Pension Strategy Comparison Report</h1>
+    ${infoPanelHtml}
     ${reportDiv.innerHTML}
   </div>
 </div>
@@ -759,6 +852,15 @@ const handleDownload = () => {
 window.addEventListener('DOMContentLoaded', () => {
   el('generateBtn').addEventListener('click', handleGenerate);
   el('downloadBtn').addEventListener('click', handleDownload);
+
+    // Build Additional Information panel on load
+    try {
+      const params = getParams();
+      const { strategyRowTitles, strategyDescriptions } = getStrategyMeta(params);
+      updateStrategyInfoPanel(strategyRowTitles, strategyDescriptions, params);
+    } catch (e) {
+      console.warn('Failed to initialize Additional Information panel on load:', e);
+    }
 
   // --- Ad hoc withdrawals UI logic ---
   const adhocRowsDiv = document.getElementById('adhocRows');
