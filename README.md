@@ -21,5 +21,7 @@ So the figures are a rough approximation in today's money after taking inflation
 
 TODO
 ----
+Move the strategy descriptions up into an expandable block above the report.  Give examples as they're not very clear
+Work on the test cases - not sure my latest changes are correct
 Since I can put savings into Stocks and Shares ISA, which I expect to perform better than inflation, i.e. comparable with SIPP, I should configure an interest rate on the amount that is in my ISA savings.  I can only add £20000 per year to ISA.  
 
