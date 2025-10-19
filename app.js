@@ -603,13 +603,23 @@ function getStrategyMeta(params) {
       Then drawdown remaining pension when no savings remain (tax rules apply).
       For example: Want to spend £30K per year.  Have  £10K savings, £100K pension.  Take lump sum of £25K in first year.  
       So £5K savings remains at end of year 1 and £75K pension plus growth, but there is no more tax free portion.`,
+
       `Use savings first, then drawdown from pension (${tfpPct}% tax-free / ${taxedPct}% taxable).
       For example: Want to spend £30K per year.  Have  £10K savings, £100K pension.  
       Spend £10K savings then need another £20K net from pension.  Have to drawdown more than £20K to get £20K net.`,
-      `Draw down from pension, but aim to keep the taxable portion within your personal allowance after state pension. The tax-free portion is ${tfpPct}%. Use savings to make up any remaining need; if none, continue drawing from pension (basic-rate tax may apply).`,
+
+      `Draw down from pension, but aim to keep the taxable portion within your personal allowance after state pension. 
+      The tax-free portion is ${tfpPct}%. Use savings to make up any remaining need; 
+      if none, continue drawing from pension (basic-rate tax may apply).
+      For example, currently, you can drawdown £16760 per annum without paying tax.  So draw this down using UFPLS to make 
+      the most of the tax free allowance every year.`,
+
       "Same as Strategy 3, plus annual £3,600 gross contribution (net £2,880 with 20% relief) at ages ≤ 75.",
+
       "Fill personal allowance (0%) then fill basic-rate band (20%)—surplus to savings.",
-      `Drawdown from pension (${tfpPct}% tax-free / ${taxedPct}% taxable). Only use savings if no pension remains.`
+
+      `Drawdown from pension (${tfpPct}% tax-free / ${taxedPct}% taxable). Only use savings if no pension remains.
+      Example:  if you need £30K then you'd withdraw £32337 to achieve a net amount of £30K`
     ]
   };
 }
