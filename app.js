@@ -599,28 +599,32 @@ function getStrategyMeta(params) {
     strategyRowTitles: ["Strategy1", "Strategy2", "Strategy3", "Strategy3A", "Strategy4", "Strategy5"],
     strategyClasses: ["strategy-1","strategy-2","strategy-3","strategy-3a","strategy-4","strategy-5"],
     strategyDescriptions: [
-      `Use savings first. Then crystallise all and withdraw ${tfpPct}% tax-free lump sum into savings. 
+      `1. Use savings first. Then crystallise all and withdraw ${tfpPct}% tax-free lump sum into savings. 
       Then drawdown remaining pension when no savings remain (tax rules apply).
-      For example: Want to spend £30K per year.  Have  £10K savings, £100K pension.  Take lump sum of £25K.  
+      For example: Want to spend £30K per year.  Have  £10K savings, £100K pension.  
+      Take lump sum of 25% tax free = £25K.  
       So £5K savings remains at end of year 1 and £75K pension plus growth, but there is no more tax free portion.`,
 
-      `Use savings first, then crystallise what I need each year into drawdown account (${tfpPct}% tax-free / ${taxedPct}% taxable).
+      `2. Use savings first, then crystallise what I need each year into drawdown account (${tfpPct}% tax-free / ${taxedPct}% taxable).
       For example: Want to spend £30K per year.  Have  £10K savings, £100K pension.  
       Spend £10K savings then need another £20K net from pension.  Have to crystallise more than £20K to get £20K net.`,
 
-      `Crystallise and withdraw each year but keep the taxable portion within the personal allowance (after any state pension). 
+      `3. Crystallise and withdraw each year but make use of full personal allowance every year. 
       The tax-free portion is ${tfpPct}%. 
       Use savings to make up any remaining spending needs.
       For example, currently, you can drawdown £16760 per annum without paying tax.  So crystallise and withdraw this amount
-      every year, even at the start when I have plenty of savings.  This makes the most of the tax free allowance every year.  
+      every year, even at the start when you have plenty of savings.  This makes the most of the tax free allowance every year.  
       e.g. if I need £25K, then take £16760 from pension and £8240 from savings.
       When I reach age 67, I'll have state pension income, currently £${params.STATE_PENSION_P/100}, so I'd crystallise less to 
       keep below tax threshold and start using more from savings to meet my spending needs.  
       Once savings depleted, I'll need to increase what I crystallise each year and will have to pay tax`,
 
-      "Same as Strategy 3, plus annual £3,600 gross contribution (net £2,880 with 20% relief) at ages ≤ 75.",
+      "4. Same as Strategy 3, plus annual £3,600 gross contribution (net £2,880 with 20% relief) at ages ≤ 75.  " +
+      "i.e. you can continue contributing to a pension, even when you are drawing down from it and have no salary." +
+      " However, you could get caught out by HMRC's pension recycling rules (so I'd be wary of this one)",
 
-      "Fill personal allowance (0%) then fill basic-rate band (20%)—surplus to savings.",
+      "5. Fill personal allowance (0%) then fill basic-rate band (20%)—surplus to savings. i.e. you can have income of " +
+      "12570.00 + 37700.00 = £50270 before paying higher rate tax",
 
       `Drawdown from pension (${tfpPct}% tax-free / ${taxedPct}% taxable). Only use savings if no pension remains.
       Example:  if you need £30K then you'd withdraw £32337 to achieve a net amount of £30K`
