@@ -1,502 +1,67 @@
-// Money utils (integers in pence to avoid floating errors)
-const toPence = (str) => {
-  if (typeof str === 'number') return Math.round(str * 100);
-  if (!str) return 0;
-  const cleaned = String(str).replace(/[^0-9.\-]/g, '');
-  const num = Number(cleaned);
-  if (Number.isNaN(num)) return 0;
-  return Math.round(num * 100);
-};
-const fromPence = (p) => (p / 100);
-const formatGBP = (p) => {
-  const n = fromPence(p);
-  return '£' + n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-};
-const clampNonNeg = (p) => (p < 0 ? 0 : p);
-
-// Rate helpers
-const mulRatePence = (pence, rate) => Math.round(pence * rate);
-const addRate = (rate) => 1 + rate;
-
-// Data structure for a year snapshot
-const wealth = (age, pensionStart, pensionEnd, savingsStart, savingsEnd, taxPaid, extraThisYear) => ({
-  age, pensionStart, pensionEnd, savingsStart, savingsEnd, taxPaid, extraThisYear,
-  totalEnd() { return this.pensionEnd + this.savingsEnd; }
-});
-
-// Parse ad hoc field: "62:5000; 70:10000"
-const parseAdhoc = (text) => {
-  const map = {};
-  if (!text || !text.trim()) return map;
-  const pairs = text.split(';').map(s => s.trim()).filter(Boolean);
-  for (const pair of pairs) {
-    const [a, v] = pair.split(':').map(s => s.trim());
-    const age = Number(a);
-    const val = toPence(v);
-    if (!Number.isNaN(age) && age > 0 && val >= 0) map[age] = val;
-  }
-  return map;
-};
-
-// Strategies
-function strategy1(savingsP, pensionP, requiredNetP, adhoc, params) {
-  const { START_AGE, END_AGE, STATE_PENSION_P, PERSONAL_ALLOWANCE_P, BASIC_RATE, PENSION_GROWTH_RATE } = params;
-  const len = END_AGE - START_AGE + 1;
-  const timeline = new Array(len);
-  let lumpSumTaken = false;
-
-  let age = START_AGE;
-  for (let idx = 0; idx < len; idx++, age++) {
-    const pensionStart = Math.round(pensionP);
-    const savingsStart = Math.round(savingsP);
-    let taxPaid = 0;
-
-    const statePensionIncome = age >= 67 ? STATE_PENSION_P : 0;
-    const extra = adhoc[age] || 0;
-
-    let need = requiredNetP + extra - statePensionIncome;
-    if (need < 0) need = 0;
-
-    // Use savings first
-    let fromSavings = Math.min(need, savingsP);
-    savingsP -= fromSavings;
-    need -= fromSavings;
-
-    // One-time lump sum: configurable tax-free portion of pension into savings if still needed
-    if (need > 0 && !lumpSumTaken && pensionP > 0) {
-      const lump = Math.round(pensionP * (typeof params.TAX_FREE_PORTION === 'number' ? params.TAX_FREE_PORTION : 0.25));
-      pensionP -= lump;
-      savingsP += lump;
-      lumpSumTaken = true;
-
-      const fromSavings2 = Math.min(need, savingsP);
-      savingsP -= fromSavings2;
-      need -= fromSavings2;
-    }
-
-    // If still needed, withdraw from pension applying tax rules
-    if (need > 0 && pensionP > 0) {
-      let allowanceLeft = PERSONAL_ALLOWANCE_P - statePensionIncome;
-      if (allowanceLeft < 0) allowanceLeft = 0;
-
-      // If within allowance: gross = need; else split across allowance and taxed-at-basic
-      let grossRequired;
-      if (need <= allowanceLeft) {
-        grossRequired = need;
-      } else {
-        const remainingNet = need - allowanceLeft;
-        const grossAbove = Math.round(remainingNet / (1 - BASIC_RATE));
-        grossRequired = allowanceLeft + grossAbove;
-      }
-      const grossWithdraw = Math.min(grossRequired, pensionP);
-
-      const zeroTaxPortion = Math.min(grossWithdraw, allowanceLeft);
-      let basicTaxPortion = grossWithdraw - zeroTaxPortion;
-      if (basicTaxPortion < 0) basicTaxPortion = 0;
-
-      const netFromPension = zeroTaxPortion + Math.round(basicTaxPortion * (1 - BASIC_RATE));
-      const taxForThisWithdrawal = Math.round(basicTaxPortion * BASIC_RATE);
-      taxPaid += taxForThisWithdrawal;
-
-      need -= netFromPension;
-      if (need < 0) need = 0;
-
-      pensionP -= grossWithdraw;
-    }
-
-    // End-of-year growth
-    pensionP = Math.round(pensionP * addRate(PENSION_GROWTH_RATE));
-
-    const pensionEnd = Math.round(pensionP);
-    const savingsEnd = Math.round(savingsP);
-    timeline[idx] = wealth(age, pensionStart, pensionEnd, savingsStart, savingsEnd, Math.round(taxPaid), Math.round(extra));
-  }
-  return timeline;
-}
-
-function strategy2(savingsP, pensionP, requiredNetP, adhoc, params) {
-  const { START_AGE, END_AGE, STATE_PENSION_P, PERSONAL_ALLOWANCE_P, BASIC_RATE, PENSION_GROWTH_RATE } = params;
-  const TAX_FREE_PORTION = (typeof params.TAX_FREE_PORTION === 'number' ? params.TAX_FREE_PORTION : 0.25), TAXED_PORTION = 1 - TAX_FREE_PORTION;
-  const NET_FACTOR = TAX_FREE_PORTION + TAXED_PORTION * (1 - BASIC_RATE);
-
-  const len = END_AGE - START_AGE + 1;
-  const timeline = new Array(len);
-
-  let age = START_AGE;
-  for (let idx = 0; idx < len; idx++, age++) {
-    const pensionStart = Math.round(pensionP);
-    const savingsStart = Math.round(savingsP);
-    let taxPaid = 0;
-
-    const statePensionIncome = age >= 67 ? STATE_PENSION_P : 0;
-    const extra = adhoc[age] || 0;
-
-    let need = requiredNetP + extra - statePensionIncome;
-    if (need < 0) need = 0;
-
-    // Use savings first
-    const fromSavings = Math.min(need, savingsP);
-    savingsP -= fromSavings;
-    need -= fromSavings;
-
-    if (need > 0 && pensionP > 0) {
-      let allowanceLeft = PERSONAL_ALLOWANCE_P - statePensionIncome;
-      if (allowanceLeft < 0) allowanceLeft = 0;
-
-      const thresholdGrossWithinAllowance = Math.round(allowanceLeft / TAXED_PORTION);
-      let grossRequired;
-      if (need <= thresholdGrossWithinAllowance) {
-        grossRequired = need;
-      } else {
-        const adjustedNeed = need - Math.round(allowanceLeft * BASIC_RATE);
-        grossRequired = Math.round(adjustedNeed / NET_FACTOR);
-      }
-      const grossWithdraw = Math.min(grossRequired, pensionP);
-
-      const taxablePortion = Math.round(grossWithdraw * TAXED_PORTION);
-      const zeroTaxOnTaxable = Math.min(taxablePortion, allowanceLeft);
-      let taxedAboveAllowance = taxablePortion - zeroTaxOnTaxable;
-      if (taxedAboveAllowance < 0) taxedAboveAllowance = 0;
-
-      const taxForThisWithdrawal = Math.round(taxedAboveAllowance * BASIC_RATE);
-      taxPaid += taxForThisWithdrawal;
-
-      const netFromPension = grossWithdraw - taxForThisWithdrawal;
-
-      need -= netFromPension;
-      if (need < 0) need = 0;
-
-      pensionP -= grossWithdraw;
-    }
-
-    pensionP = Math.round(pensionP * addRate(PENSION_GROWTH_RATE));
-
-    const pensionEnd = Math.round(pensionP);
-    const savingsEnd = Math.round(savingsP);
-    timeline[idx] = wealth(age, pensionStart, pensionEnd, savingsStart, savingsEnd, Math.round(taxPaid), Math.round(extra));
-  }
-  return timeline;
-}
-
-function strategy3(savingsP, pensionP, requiredNetP, adhoc, params) {
-  const { START_AGE, END_AGE, STATE_PENSION_P, PERSONAL_ALLOWANCE_P, BASIC_RATE, PENSION_GROWTH_RATE } = params;
-  const TAX_FREE_PORTION = (typeof params.TAX_FREE_PORTION === 'number' ? params.TAX_FREE_PORTION : 0.25), TAXED_PORTION = 1 - TAX_FREE_PORTION;
-  const NET_FACTOR = TAX_FREE_PORTION + TAXED_PORTION * (1 - BASIC_RATE);
-
-  const len = END_AGE - START_AGE + 1;
-  const timeline = new Array(len);
-
-  let age = START_AGE;
-  for (let idx = 0; idx < len; idx++, age++) {
-    const pensionStart = Math.round(pensionP);
-    const savingsStart = Math.round(savingsP);
-    let taxPaid = 0;
-
-    const statePensionIncome = age >= 67 ? STATE_PENSION_P : 0;
-    const extra = adhoc[age] || 0;
-
-    let need = requiredNetP + extra - statePensionIncome;
-    if (need < 0) need = 0;
-
-    if (need > 0 && pensionP > 0) {
-      let allowanceLeft = PERSONAL_ALLOWANCE_P - statePensionIncome;
-      if (allowanceLeft < 0) allowanceLeft = 0;
-
-      const grossCapWithinAllowance = Math.round(allowanceLeft / TAXED_PORTION);
-      const grossZeroCandidate = Math.min(need, grossCapWithinAllowance, pensionP);
-      const grossZero = Math.round(grossZeroCandidate);
-
-      if (grossZero > 0) {
-        const taxableZero = Math.round(grossZero * TAXED_PORTION);
-        const netZero = grossZero; // no tax
-        pensionP -= grossZero;
-        need -= netZero;
-        if (need < 0) need = 0;
-        const allowanceConsumed = Math.min(taxableZero, allowanceLeft);
-        allowanceLeft -= allowanceConsumed;
-        if (allowanceLeft < 0) allowanceLeft = 0;
-      }
-
-      if (need > 0 && savingsP > 0) {
-        const fromSavings = Math.min(need, savingsP);
-        savingsP -= fromSavings; need -= fromSavings; if (need < 0) need = 0;
-      }
-
-      if (need > 0 && pensionP > 0) {
-        let adjustedNeed = need - Math.round(allowanceLeft * BASIC_RATE);
-        if (adjustedNeed < 0) adjustedNeed = 0;
-        const grossRequired = Math.round(adjustedNeed / NET_FACTOR);
-        const grossWithdraw = Math.min(grossRequired, pensionP);
-
-        const taxablePortion = Math.round(grossWithdraw * TAXED_PORTION);
-        const zeroTaxOnTaxable = Math.min(taxablePortion, allowanceLeft);
-        let taxedAboveAllowance = taxablePortion - zeroTaxOnTaxable;
-        if (taxedAboveAllowance < 0) taxedAboveAllowance = 0;
-        const taxForThisWithdrawal = Math.round(taxedAboveAllowance * BASIC_RATE);
-        taxPaid += taxForThisWithdrawal;
-
-        const netFromPension = grossWithdraw - taxForThisWithdrawal;
-
-        pensionP -= grossWithdraw;
-        need -= netFromPension; if (need < 0) need = 0;
-
-        allowanceLeft -= zeroTaxOnTaxable; if (allowanceLeft < 0) allowanceLeft = 0;
-      }
-    }
-
-    if (need > 0 && savingsP > 0) {
-      const fromSavings = Math.min(need, savingsP);
-      savingsP -= fromSavings; need -= fromSavings; if (need < 0) need = 0;
-    }
-
-    pensionP = Math.round(pensionP * addRate(PENSION_GROWTH_RATE));
-
-    timeline[idx] = wealth(age, Math.round(pensionStart), Math.round(pensionP), Math.round(savingsStart), Math.round(savingsP), Math.round(taxPaid), Math.round(extra));
-  }
-  return timeline;
-}
-
-function strategy3A(savingsP, pensionP, requiredNetP, adhoc, params) {
-  const { START_AGE, END_AGE, STATE_PENSION_P, PERSONAL_ALLOWANCE_P, BASIC_RATE, PENSION_GROWTH_RATE, NO_INCOME_CONTRIBUTION_LIMIT_P } = params;
-  const TAX_FREE_PORTION = (typeof params.TAX_FREE_PORTION === 'number' ? params.TAX_FREE_PORTION : 0.25), TAXED_PORTION = 1 - TAX_FREE_PORTION;
-  const NET_FACTOR = TAX_FREE_PORTION + TAXED_PORTION * (1 - BASIC_RATE);
-  const len = END_AGE - START_AGE + 1;
-  const timeline = new Array(len);
-
-  let age = START_AGE;
-  for (let idx = 0; idx < len; idx++, age++) {
-    const pensionStart = Math.round(pensionP);
-    const savingsStart = Math.round(savingsP);
-    let taxPaid = 0;
-
-    const statePensionIncome = age >= 67 ? STATE_PENSION_P : 0;
-    const extra = adhoc[age] || 0;
-
-    let need = requiredNetP + extra - statePensionIncome;
-    if (need < 0) need = 0;
-
-    // Pay up to £3,600 gross (net £2,880) from savings into pension if age <= 75
-    if (age <= 75 && savingsP > 0) {
-      const netCap = Math.round(NO_INCOME_CONTRIBUTION_LIMIT_P * (1 - BASIC_RATE)); // 2880
-      const netFromSavings = Math.min(savingsP, netCap);
-      if (netFromSavings > 0) {
-        const gross = Math.round(netFromSavings / (1 - BASIC_RATE));
-        savingsP -= netFromSavings;
-        pensionP += gross;
-      }
-    }
-
-    if (need > 0 && pensionP > 0) {
-      let allowanceLeft = PERSONAL_ALLOWANCE_P - statePensionIncome;
-      if (allowanceLeft < 0) allowanceLeft = 0;
-
-      const grossCapWithinAllowance = Math.round(allowanceLeft / TAXED_PORTION);
-      const grossZeroCandidate = Math.min(need, grossCapWithinAllowance, pensionP);
-      const grossZero = Math.round(grossZeroCandidate);
-      if (grossZero > 0) {
-        const taxableZero = Math.round(grossZero * TAXED_PORTION);
-        const netZero = grossZero;
-        pensionP -= grossZero;
-        need -= netZero; if (need < 0) need = 0;
-        const consumed = Math.min(taxableZero, allowanceLeft);
-        allowanceLeft -= consumed; if (allowanceLeft < 0) allowanceLeft = 0;
-      }
-
-      if (need > 0 && savingsP > 0) {
-        const fromSavings = Math.min(need, savingsP);
-        savingsP -= fromSavings; need -= fromSavings; if (need < 0) need = 0;
-      }
-
-      if (need > 0 && pensionP > 0) {
-        let adjustedNeed = need - Math.round(allowanceLeft * BASIC_RATE);
-        if (adjustedNeed < 0) adjustedNeed = 0;
-        const grossRequired = Math.round(adjustedNeed / NET_FACTOR);
-        const grossWithdraw = Math.min(grossRequired, pensionP);
-
-        const taxablePortion = Math.round(grossWithdraw * TAXED_PORTION);
-        const zeroTaxOnTaxable = Math.min(taxablePortion, allowanceLeft);
-        let taxedAboveAllowance = taxablePortion - zeroTaxOnTaxable;
-        if (taxedAboveAllowance < 0) taxedAboveAllowance = 0;
-        const taxForThisWithdrawal = Math.round(taxedAboveAllowance * BASIC_RATE);
-        taxPaid += taxForThisWithdrawal;
-
-        const netFromPension = grossWithdraw - taxForThisWithdrawal;
-
-        pensionP -= grossWithdraw;
-        need -= netFromPension; if (need < 0) need = 0;
-
-        allowanceLeft -= zeroTaxOnTaxable; if (allowanceLeft < 0) allowanceLeft = 0;
-      }
-    }
-
-    if (need > 0 && savingsP > 0) {
-      const fromSavings = Math.min(need, savingsP);
-      savingsP -= fromSavings; need -= fromSavings; if (need < 0) need = 0;
-    }
-
-    pensionP = Math.round(pensionP * addRate(PENSION_GROWTH_RATE));
-
-    timeline[idx] = wealth(age, Math.round(pensionStart), Math.round(pensionP), Math.round(savingsStart), Math.round(savingsP), Math.round(taxPaid), Math.round(extra));
+// Utilities and strategies have been moved to separate files (utils.js and strategies/*.js).
+// This file now assumes window.Utils and window.Strategies are loaded before these functions are invoked.
+
+// Simple loader to ensure dependencies are present
+const ensureAppReady = (() => {
+  let loadingPromise = null;
+
+  function haveAll() {
+    return (
+      window.Utils &&
+      typeof window.Utils.toPence === 'function' &&
+      window.Strategies &&
+      typeof window.Strategies.strategy1 === 'function' &&
+      typeof window.Strategies.strategy2 === 'function' &&
+      typeof window.Strategies.strategy3 === 'function' &&
+      typeof window.Strategies.strategy3A === 'function' &&
+      typeof window.Strategies.strategy4 === 'function' &&
+      typeof window.Strategies.strategy5 === 'function'
+    );
   }
 
-  return timeline;
-}
-
-function strategy4(savingsP, pensionP, requiredNetP, adhoc, params) {
-  const { START_AGE, END_AGE, STATE_PENSION_P, PERSONAL_ALLOWANCE_P, BASIC_RATE, BASIC_RATE_BAND_P, PENSION_GROWTH_RATE } = params;
-  const TAX_FREE_PORTION = (typeof params.TAX_FREE_PORTION === 'number' ? params.TAX_FREE_PORTION : 0.25), TAXED_PORTION = 1 - TAX_FREE_PORTION;
-
-  const len = END_AGE - START_AGE + 1;
-  const timeline = new Array(len);
-
-  let age = START_AGE;
-  for (let idx = 0; idx < len; idx++, age++) {
-    const pensionStart = Math.round(pensionP);
-    const savingsStart = Math.round(savingsP);
-    let taxPaid = 0;
-
-    const statePensionIncome = age >= 67 ? STATE_PENSION_P : 0;
-    const extra = adhoc[age] || 0;
-
-    let need = requiredNetP + extra - statePensionIncome;
-    if (need < 0) need = 0;
-
-    let allowanceLeft = PERSONAL_ALLOWANCE_P - statePensionIncome;
-    if (allowanceLeft < 0) allowanceLeft = 0;
-
-    // Step A: zero-tax UFPLS within allowance
-    if (pensionP > 0 && allowanceLeft > 0) {
-      const grossCapWithinAllowance = Math.round(allowanceLeft / TAXED_PORTION);
-      const grossZero = Math.min(grossCapWithinAllowance, pensionP);
-      if (grossZero > 0) {
-        const taxableZero = Math.round(grossZero * TAXED_PORTION);
-        const netZero = grossZero;
-        pensionP -= grossZero;
-        const consumed = Math.min(taxableZero, allowanceLeft);
-        allowanceLeft -= consumed; if (allowanceLeft < 0) allowanceLeft = 0;
-        // We'll apply net to needs later as a pool
-        var netFromPensionTotal = netZero;
-      } else {
-        var netFromPensionTotal = 0;
-      }
-    } else {
-      var netFromPensionTotal = 0;
-    }
-
-    // Step B: fill basic-rate band
-    if (pensionP > 0) {
-      let taxableFromStatePension = statePensionIncome - PERSONAL_ALLOWANCE_P;
-      if (taxableFromStatePension < 0) taxableFromStatePension = 0;
-      let remainingBasicBand = BASIC_RATE_BAND_P - taxableFromStatePension;
-      if (remainingBasicBand < 0) remainingBasicBand = 0;
-
-      if (remainingBasicBand > 0) {
-        const grossFillTarget = Math.round((remainingBasicBand + allowanceLeft) / TAXED_PORTION);
-        const grossFill = Math.min(grossFillTarget, pensionP);
-        if (grossFill > 0) {
-          const taxablePortion = Math.round(grossFill * TAXED_PORTION);
-          const zeroTaxOnTaxable = Math.min(taxablePortion, allowanceLeft);
-          let taxedAboveAllowance = taxablePortion - zeroTaxOnTaxable;
-          if (taxedAboveAllowance < 0) taxedAboveAllowance = 0;
-
-          const tax = Math.round(taxedAboveAllowance * BASIC_RATE);
-          taxPaid += tax;
-          const netFill = grossFill - tax;
-
-          pensionP -= grossFill;
-          allowanceLeft -= zeroTaxOnTaxable; if (allowanceLeft < 0) allowanceLeft = 0;
-
-          netFromPensionTotal += netFill;
+  function loadScript(src) {
+    return new Promise((resolve, reject) => {
+      const existing = Array.from(document.getElementsByTagName('script'))
+        .find(s => (s.getAttribute('src') || '').endsWith(src));
+      if (existing) {
+        if (existing.dataset.loaded === 'true') {
+          resolve();
+        } else {
+          existing.addEventListener('load', () => resolve());
+          existing.addEventListener('error', () => reject(new Error('Failed to load ' + src)));
         }
+        return;
       }
-    }
-
-    // Apply net pension to spending; surplus to savings
-    if (netFromPensionTotal > 0) {
-      const spendFromPension = Math.min(netFromPensionTotal, need);
-      need -= spendFromPension;
-      const surplus = netFromPensionTotal - spendFromPension;
-      if (surplus > 0) savingsP += surplus;
-    }
-
-    // If still needed, top up from savings
-    if (need > 0 && savingsP > 0) {
-      const fromSavings = Math.min(need, savingsP);
-      savingsP -= fromSavings; need -= fromSavings; if (need < 0) need = 0;
-    }
-
-    pensionP = Math.round(pensionP * addRate(PENSION_GROWTH_RATE));
-
-    timeline[idx] = wealth(age, Math.round(pensionStart), Math.round(pensionP), Math.round(savingsStart), Math.round(savingsP), Math.round(taxPaid), Math.round(extra));
+      const el = document.createElement('script');
+      el.src = src;
+      el.async = false;
+      el.onload = () => { el.dataset.loaded = 'true'; resolve(); };
+      el.onerror = () => reject(new Error('Failed to load ' + src));
+      document.head.appendChild(el);
+    });
   }
-  return timeline;
-}
 
-function strategy5(savingsP, pensionP, requiredNetP, adhoc, params) {
-  const { START_AGE, END_AGE, STATE_PENSION_P, PERSONAL_ALLOWANCE_P, BASIC_RATE, PENSION_GROWTH_RATE } = params;
-  const TAX_FREE_PORTION = (typeof params.TAX_FREE_PORTION === 'number' ? params.TAX_FREE_PORTION : 0.25), TAXED_PORTION = 1 - TAX_FREE_PORTION;
-  const NET_FACTOR = TAX_FREE_PORTION + TAXED_PORTION * (1 - BASIC_RATE);
+  return function ensureAppReady() {
+    if (haveAll()) return Promise.resolve();
+    if (loadingPromise) return loadingPromise;
 
-  const len = END_AGE - START_AGE + 1;
-  const timeline = new Array(len);
+    // Load utils first, then strategies
+    const strategyFiles = [
+      'strategies/strategy1.js',
+      'strategies/strategy2.js',
+      'strategies/strategy3.js',
+      'strategies/strategy3A.js',
+      'strategies/strategy4.js',
+      'strategies/strategy5.js',
+    ];
 
-  let age = START_AGE;
-  for (let idx = 0; idx < len; idx++, age++) {
-    const pensionStart = Math.round(pensionP);
-    const savingsStart = Math.round(savingsP);
-    let taxPaid = 0;
+    loadingPromise = loadScript('utils.js')
+      .then(() => Promise.all(strategyFiles.map(loadScript)))
+      .then(() => { if (!haveAll()) throw new Error('Dependencies not initialized'); });
 
-    const statePensionIncome = age >= 67 ? STATE_PENSION_P : 0;
-    const extra = adhoc[age] || 0;
-
-    let need = requiredNetP + extra - statePensionIncome;
-    if (need < 0) need = 0;
-
-    if (need > 0 && pensionP > 0) {
-      let allowanceLeft = PERSONAL_ALLOWANCE_P - statePensionIncome;
-      if (allowanceLeft < 0) allowanceLeft = 0;
-
-      const thresholdGrossWithinAllowance = Math.round(allowanceLeft / TAXED_PORTION);
-      let grossRequired;
-      if (need <= thresholdGrossWithinAllowance) {
-        grossRequired = need;
-      } else {
-        const adjustedNeed = need - Math.round(allowanceLeft * BASIC_RATE);
-        grossRequired = Math.round(adjustedNeed / NET_FACTOR);
-      }
-      const grossWithdraw = Math.min(grossRequired, pensionP);
-
-      const taxablePortion = Math.round(grossWithdraw * TAXED_PORTION);
-      const zeroTaxOnTaxable = Math.min(taxablePortion, allowanceLeft);
-      let taxedAboveAllowance = taxablePortion - zeroTaxOnTaxable;
-      if (taxedAboveAllowance < 0) taxedAboveAllowance = 0;
-
-      const tax = Math.round(taxedAboveAllowance * BASIC_RATE);
-      taxPaid += tax;
-
-      const netFromPension = grossWithdraw - tax;
-      pensionP -= grossWithdraw;
-
-      if (netFromPension >= need) {
-        const surplus = netFromPension - need;
-        need = 0;
-        if (surplus > 0) savingsP += surplus;
-      } else {
-        need -= netFromPension;
-      }
-    }
-
-    if (need > 0 && savingsP > 0) {
-      const fromSavings = Math.min(need, savingsP);
-      savingsP -= fromSavings; need -= fromSavings; if (need < 0) need = 0;
-    }
-
-    pensionP = Math.round(pensionP * addRate(PENSION_GROWTH_RATE));
-
-    timeline[idx] = wealth(age, Math.round(pensionStart), Math.round(pensionP), Math.round(savingsStart), Math.round(savingsP), Math.round(taxPaid), Math.round(extra));
-  }
-  return timeline;
-}
+    return loadingPromise;
+  };
+})();
 
 // Report builder
 
@@ -513,9 +78,9 @@ function buildStrategyInfoInnerHTML(strategyRowTitles, strategyDescriptions, par
     <h3>Assumptions</h3>
     <ul>
       <li><strong>Pension growth rate above inflation:</strong> ${growthRatePercent}%</li>
-      <li><strong>Personal allowance:</strong> ${formatGBP(params.PERSONAL_ALLOWANCE_P)}</li>
-      <li><strong>State pension (annual):</strong> ${formatGBP(params.STATE_PENSION_P)}</li>
-      <li><strong>Basic-rate band width:</strong> ${formatGBP(params.BASIC_RATE_BAND_P)}</li>
+      <li><strong>Personal allowance:</strong> ${window.Utils.formatGBP(params.PERSONAL_ALLOWANCE_P)}</li>
+      <li><strong>State pension (annual):</strong> ${window.Utils.formatGBP(params.STATE_PENSION_P)}</li>
+      <li><strong>Basic-rate band width:</strong> ${window.Utils.formatGBP(params.BASIC_RATE_BAND_P)}</li>
       <li><strong>Tax-free pension portion:</strong> ${(params.TAX_FREE_PORTION * 100).toFixed(0)}%</li>
       <li><strong>Savings interest:</strong> None (and no inflation either)</li>
     </ul>
@@ -637,12 +202,12 @@ function generateComparisonReport(savings, pension, requiredAmounts, targetAges,
 
   const timelinesByAmt = requiredAmounts.map(req => {
     return {
-      s1: strategy1(savings, pension, req, adhoc, params),
-      s2: strategy2(savings, pension, req, adhoc, params),
-      s3: strategy3(savings, pension, req, adhoc, params),
-      s3a: strategy3A(savings, pension, req, adhoc, params),
-      s4: strategy4(savings, pension, req, adhoc, params),
-      s5: strategy5(savings, pension, req, adhoc, params),
+      s1: window.Strategies.strategy1(savings, pension, req, adhoc, params),
+      s2: window.Strategies.strategy2(savings, pension, req, adhoc, params),
+      s3: window.Strategies.strategy3(savings, pension, req, adhoc, params),
+      s3a: window.Strategies.strategy3A(savings, pension, req, adhoc, params),
+      s4: window.Strategies.strategy4(savings, pension, req, adhoc, params),
+      s5: window.Strategies.strategy5(savings, pension, req, adhoc, params),
     };
   });
 
@@ -655,14 +220,14 @@ function generateComparisonReport(savings, pension, requiredAmounts, targetAges,
   let html = '';
   html += `<div class="summary-block">
     <h3>Initial Parameters</h3>
-    <p><strong>Initial Savings:</strong> ${formatGBP(savings)}</p>
-    <p><strong>Initial Pension:</strong> ${formatGBP(pension)}</p>
-    <p><strong>Example Annual Spending Amounts:</strong> ${requiredAmounts.map(formatGBP).join(', ')}</p>
+    <p><strong>Initial Savings:</strong> ${window.Utils.formatGBP(savings)}</p>
+    <p><strong>Initial Pension:</strong> ${window.Utils.formatGBP(pension)}</p>
+    <p><strong>Example Annual Spending Amounts:</strong> ${requiredAmounts.map(window.Utils.formatGBP).join(', ')}</p>
     <p><strong>Target Ages:</strong> ${agesToUse.join(', ')}</p>
     <p><strong>Ad hoc withdrawals:</strong> ${
       (Object.keys(adhoc).length === 0)
         ? 'None'
-        : Object.keys(adhoc).sort((a,b)=>a-b).map(a => `Age ${a}: ${formatGBP(adhoc[a])}`).join('; ')
+        : Object.keys(adhoc).sort((a,b)=>a-b).map(a => `Age ${a}: ${window.Utils.formatGBP(adhoc[a])}`).join('; ')
     }</p>
   </div>`;
 
@@ -686,7 +251,7 @@ function generateComparisonReport(savings, pension, requiredAmounts, targetAges,
         <thead>
           <tr>
             <th class="strategy-column"><span class="strategy-header-text">Strategy</span></th>
-            ${requiredAmounts.map(a=>`<th>${formatGBP(a)}</th>`).join('')}
+            ${requiredAmounts.map(a=>`<th>${window.Utils.formatGBP(a)}</th>`).join('')}
           </tr>
         </thead>
         <tbody>
@@ -716,10 +281,10 @@ function generateComparisonReport(savings, pension, requiredAmounts, targetAges,
         const pension = timelinePoint.pensionEnd;
         const taxPaid = timelinePoint.taxPaid;
 
-        const tooltip = `Savings: ${formatGBP(savings)}, Pension: ${formatGBP(pension)}, Tax paid: ${formatGBP(taxPaid)}`;
+        const tooltip = `Savings: ${window.Utils.formatGBP(savings)}, Pension: ${window.Utils.formatGBP(pension)}, Tax paid: ${window.Utils.formatGBP(taxPaid)}`;
         const isBest = cell === maxForCol[j];
         const extraClass = isBest ? ' best' : '';
-        html += `<td class="currency${extraClass}" title="${tooltip}">${formatGBP(cell)}</td>`;
+        html += `<td class="currency${extraClass}" title="${tooltip}">${window.Utils.formatGBP(cell)}</td>`;
       }
       html += `</tr>`;
     }
@@ -740,11 +305,11 @@ const el = (id) => document.getElementById(id);
 const getParams = () => {
   // START_AGE and END_AGE are set in handleGenerate from target ages
   const PENSION_GROWTH_RATE = Number(String(el('pensionGrowthRate').value || '0.04'));
-  const PERSONAL_ALLOWANCE_P = toPence(el('personalAllowance').value || '12570.00');
-  const STATE_PENSION_P = toPence(el('statePension').value || '11973.00');
+  const PERSONAL_ALLOWANCE_P = window.Utils.toPence(el('personalAllowance').value || '12570.00');
+  const STATE_PENSION_P = window.Utils.toPence(el('statePension').value || '11973.00');
   const BASIC_RATE = Number(String(el('basicRate').value || '0.20'));
-  const BASIC_RATE_BAND_P = toPence(el('basicRateBand').value || '37700.00');
-  const NO_INCOME_CONTRIBUTION_LIMIT_P = toPence(el('noIncomeContributionLimit').value || '3600.00');
+  const BASIC_RATE_BAND_P = window.Utils.toPence(el('basicRateBand').value || '37700.00');
+  const NO_INCOME_CONTRIBUTION_LIMIT_P = window.Utils.toPence(el('noIncomeContributionLimit').value || '3600.00');
   const TAX_FREE_PORTION = Number(String(el('taxFreePortion').value || '0.25'));
 
   return {
@@ -756,13 +321,15 @@ const getParams = () => {
   };
 };
 
-const handleGenerate = () => {
+const handleGenerate = async () => {
   try {
-    const savings = toPence(el('initialSavings').value || '0');
-    const pension = toPence(el('initialPension').value || '0');
+    await ensureAppReady();
+
+    const savings = window.Utils.toPence(el('initialSavings').value || '0');
+    const pension = window.Utils.toPence(el('initialPension').value || '0');
 
     const spendingStr = el('spendingAmounts').value || '';
-    const requiredAmounts = (spendingStr.split(',').map(s => s.trim()).filter(Boolean).map(toPence));
+    const requiredAmounts = (spendingStr.split(',').map(s => s.trim()).filter(Boolean).map(window.Utils.toPence));
     if (requiredAmounts.length === 0) {
       alert('Please provide at least one annual spending amount.');
       return;
@@ -785,7 +352,7 @@ const handleGenerate = () => {
       const age = Number(row.querySelector('.adhoc-age').dataset.value);
       const amount = Number(row.querySelector('.adhoc-amount').dataset.value);
       if (!Number.isNaN(age) && age > 0 && !Number.isNaN(amount) && amount >= 0) {
-        adhoc[age] = toPence(amount);
+        adhoc[age] = window.Utils.toPence(amount);
       }
     });
 
@@ -814,12 +381,14 @@ const handleGenerate = () => {
   }
 };
 
-const handleDownload = () => {
+const handleDownload = async () => {
   const reportDiv = el('report');
   if (!reportDiv.innerHTML.trim()) {
     alert('Please generate a report first.');
     return;
   }
+
+  await ensureAppReady();
 
   const params = getParams();
   const growthRatePercent = (params.PENSION_GROWTH_RATE * 100).toFixed(2);
@@ -885,6 +454,17 @@ window.addEventListener('DOMContentLoaded', () => {
   const addAdhocBtn = document.getElementById('addAdhocBtn');
   const adhocAgeEl = document.getElementById('adhocAge');
   const adhocAmountEl = document.getElementById('adhocAmount');
+
+  // Build Additional Information panel on load (after dependencies)
+  ensureAppReady().then(() => {
+    try {
+      const params = getParams();
+      const { strategyRowTitles, strategyDescriptions } = getStrategyMeta(params);
+      updateStrategyInfoPanel(strategyRowTitles, strategyDescriptions, params);
+    } catch (e) {
+      console.warn('Failed to initialize Additional Information panel on load:', e);
+    }
+  });
 
   // Set min and max for Age control based on Target Ages
   const targetAgesEl = document.getElementById('targetAges');
