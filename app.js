@@ -65,6 +65,82 @@ const ensureAppReady = (() => {
 
 // Report builder
 
+// Generate a full timeline report (per strategy) with rows for each age from START_AGE to END_AGE
+function generateFullReport(savings, pension, requiredAmounts, adhoc, params) {
+  const { strategyRowTitles, strategyClasses } = getStrategyMeta(params);
+  const len = params.END_AGE - params.START_AGE + 1;
+
+  const format = (p) => window.Utils.formatGBP(p);
+
+  // Precompute all timelines for each requested spending amount
+  const timelinesByAmt = requiredAmounts.map(req => ({
+    req,
+    s1: window.Strategies.strategy1(savings, pension, req, adhoc, params),
+    s2: window.Strategies.strategy2(savings, pension, req, adhoc, params),
+    s3: window.Strategies.strategy3(savings, pension, req, adhoc, params),
+    s3a: window.Strategies.strategy3A(savings, pension, req, adhoc, params),
+    s4: window.Strategies.strategy4(savings, pension, req, adhoc, params),
+    s5: window.Strategies.strategy5(savings, pension, req, adhoc, params),
+  }));
+
+  const renderTimelineTable = (title, cssClass, timeline) => {
+    let html = '';
+    html += `<h3 class="${cssClass}">${title}</h3>`;
+    html += `<table class="full-timeline"><thead><tr>
+      <th>Age</th>
+      <th>Pension Start</th>
+      <th>Pension End</th>
+      <th>Savings Start</th>
+      <th>Savings End</th>
+      <th>Tax Paid</th>
+      <th>Extra This Year</th>
+    </tr></thead><tbody>`;
+    for (let i = 0; i < timeline.length; i++) {
+      const w = timeline[i];
+      html += `<tr>
+        <td>${w.age}</td>
+        <td class="currency">${format(w.pensionStart)}</td>
+        <td class="currency">${format(w.pensionEnd)}</td>
+        <td class="currency">${format(w.savingsStart)}</td>
+        <td class="currency">${format(w.savingsEnd)}</td>
+        <td class="currency">${format(w.taxPaid)}</td>
+        <td class="currency">${format(w.extraThisYear)}</td>
+      </tr>`;
+    }
+    html += `</tbody></table>`;
+    return html;
+  };
+
+  let html = '';
+  html += `<div class="summary-block">
+    <h3>Full Timeline Report</h3>
+    <p><strong>Initial Savings:</strong> ${format(savings)}</p>
+    <p><strong>Initial Pension:</strong> ${format(pension)}</p>
+    <p><strong>Annual Spending Amounts:</strong> ${requiredAmounts.map(format).join(', ')}</p>
+    <p><strong>Years:</strong> ${params.START_AGE}–${params.END_AGE}</p>
+  </div>`;
+
+  for (const block of timelinesByAmt) {
+    html += `<h2>Spending: ${format(block.req)} per year</h2>`;
+
+    // Strategy 1..5 and 3A in the same order as meta
+    const perStrategy = [
+      { title: strategyRowTitles[0], cls: strategyClasses[0], tl: block.s1 },
+      { title: strategyRowTitles[1], cls: strategyClasses[1], tl: block.s2 },
+      { title: strategyRowTitles[2], cls: strategyClasses[2], tl: block.s3 },
+      { title: strategyRowTitles[3], cls: strategyClasses[3], tl: block.s3a },
+      { title: strategyRowTitles[4], cls: strategyClasses[4], tl: block.s4 },
+      { title: strategyRowTitles[5], cls: strategyClasses[5], tl: block.s5 },
+    ];
+
+    for (const row of perStrategy) {
+      html += renderTimelineTable(row.title, row.cls, row.tl);
+    }
+  }
+
+  return html;
+}
+
 // Collapsible top-of-page Strategy Info builder
 function buildStrategyInfoInnerHTML(strategyRowTitles, strategyDescriptions, params) {
   const growthRatePercent = (params.PENSION_GROWTH_RATE * 100).toFixed(2);
@@ -383,6 +459,65 @@ const handleGenerate = async () => {
   }
 };
 
+const handleGenerateFull = async () => {
+  try {
+    await ensureAppReady();
+
+    const savings = window.Utils.toPence(el('initialSavings').value || '0');
+    const pension = window.Utils.toPence(el('initialPension').value || '0');
+
+    const spendingStr = el('spendingAmounts').value || '';
+    const requiredAmounts = (spendingStr.split(',').map(s => s.trim()).filter(Boolean).map(window.Utils.toPence));
+    if (requiredAmounts.length === 0) {
+      alert('Please provide at least one annual spending amount.');
+      return;
+    }
+
+    const agesStr = el('targetAges').value || '';
+    const targetAges = agesStr
+      ? agesStr.split(',').map(s => Number(s.trim())).filter(n => !Number.isNaN(n))
+      : [];
+
+    if (targetAges.length === 0) {
+      alert('Please provide at least one target age.');
+      return;
+    }
+
+    // Gather ad hoc withdrawals from UI
+    const adhoc = {};
+    const adhocRowsEls = document.querySelectorAll('.adhoc-row');
+    adhocRowsEls.forEach((row) => {
+      const age = Number(row.querySelector('.adhoc-age').dataset.value);
+      const amount = Number(row.querySelector('.adhoc-amount').dataset.value);
+      if (!Number.isNaN(age) && age > 0 && !Number.isNaN(amount) && amount >= 0) {
+        adhoc[age] = window.Utils.toPence(amount);
+      }
+    });
+
+    // Determine START_AGE and END_AGE from targets
+    const START_AGE = Math.min(...targetAges);
+    const END_AGE = Math.max(...targetAges);
+
+    const params = getParams();
+    params.START_AGE = START_AGE;
+    params.END_AGE = END_AGE;
+
+    // Validate ages
+    for (const a of targetAges) {
+      if (a < 55 || a > 99) {
+        alert(`Target age ${a} must be between 55 and 99.`);
+        return;
+      }
+    }
+
+    const html = generateFullReport(savings, pension, requiredAmounts, adhoc, params);
+    el('report').innerHTML = html;
+  } catch (e) {
+    console.error(e);
+    alert('Failed to generate full report: ' + (e?.message || e));
+  }
+};
+
 const handleDownload = async () => {
   const reportDiv = el('report');
   if (!reportDiv.innerHTML.trim()) {
@@ -441,6 +576,23 @@ const handleDownload = async () => {
 window.addEventListener('DOMContentLoaded', () => {
   el('generateBtn').addEventListener('click', handleGenerate);
   el('downloadBtn').addEventListener('click', handleDownload);
+
+  // Add a "Generate Full Report" button next to the Download button if not present
+  const existingFullBtn = document.getElementById('generateFullBtn');
+  if (!existingFullBtn) {
+    const fullBtn = document.createElement('button');
+    fullBtn.id = 'generateFullBtn';
+    fullBtn.type = 'button';
+    fullBtn.textContent = 'Generate Full Report';
+    const downloadBtnEl = el('downloadBtn');
+    if (downloadBtnEl && downloadBtnEl.parentNode) {
+      downloadBtnEl.parentNode.insertBefore(fullBtn, downloadBtnEl.nextSibling);
+    } else {
+      // Fallback: append to body
+      document.body.appendChild(fullBtn);
+    }
+    fullBtn.addEventListener('click', handleGenerateFull);
+  }
 
     // Build Additional Information panel on load
     try {
