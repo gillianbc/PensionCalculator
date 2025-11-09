@@ -40,6 +40,27 @@
     return map;
   };
 
+  // Spend from savings with priority: Other Savings first, then ISA
+  const spendFromSavings = (need, otherP, isaP) => {
+    let useOther = Math.min(need, otherP);
+    otherP -= useOther;
+    need -= useOther;
+    let useIsa = Math.min(need, isaP);
+    isaP -= useIsa;
+    need -= useIsa;
+    return { spent: useOther + useIsa, otherP, isaP, need };
+  };
+
+  // Withdraw an exact amount from savings pools (up to available), prioritized Other then ISA
+  const withdrawFromSavings = (amount, otherP, isaP) => {
+    const takeOther = Math.min(amount, otherP);
+    otherP -= takeOther;
+    const remainder = amount - takeOther;
+    const takeIsa = Math.min(remainder, isaP);
+    isaP -= takeIsa;
+    return { withdrawn: takeOther + takeIsa, otherP, isaP };
+  };
+
   global.Utils = Object.assign({}, global.Utils, {
     toPence,
     fromPence,
@@ -48,6 +69,8 @@
     mulRatePence,
     addRate,
     wealth,
-    parseAdhoc
+    parseAdhoc,
+    spendFromSavings,
+    withdrawFromSavings
   });
 })(typeof window !== 'undefined' ? window : globalThis);

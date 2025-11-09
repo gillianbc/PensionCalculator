@@ -7,10 +7,13 @@
     const timeline = new Array(len);
     let lumpSumTaken = false;
 
+    let otherSavingsP = params.INITIAL_OTHER_SAVINGS_P || 0;
+    let isaSavingsP = params.INITIAL_ISA_SAVINGS_P || 0;
+
     let age = START_AGE;
     for (let idx = 0; idx < len; idx++, age++) {
       const pensionStart = Math.round(pensionP);
-      const savingsStart = Math.round(savingsP);
+      const savingsStart = Math.round(otherSavingsP + isaSavingsP);
       let taxPaid = 0;
 
       const statePensionIncome = age >= 67 ? STATE_PENSION_P : 0;
@@ -19,21 +22,28 @@
       let need = requiredNetP + extra - statePensionIncome;
       if (need < 0) need = 0;
 
-      // Use savings first
-      let fromSavings = Math.min(need, savingsP);
-      savingsP -= fromSavings;
-      need -= fromSavings;
+      // Use savings first (Other then ISA)
+      if (need > 0 && (otherSavingsP > 0 || isaSavingsP > 0)) {
+        const res = global.Utils.spendFromSavings(need, otherSavingsP, isaSavingsP);
+        otherSavingsP = res.otherP;
+        isaSavingsP = res.isaP;
+        need = res.need;
+      }
 
       // One-time lump sum: configurable tax-free portion of pension into savings if still needed
       if (need > 0 && !lumpSumTaken && pensionP > 0) {
         const lump = Math.round(pensionP * (typeof params.TAX_FREE_PORTION === 'number' ? params.TAX_FREE_PORTION : 0.25));
         pensionP -= lump;
-        savingsP += lump;
+        // Add lump sum to Other Savings by default
+        otherSavingsP += lump;
         lumpSumTaken = true;
 
-        const fromSavings2 = Math.min(need, savingsP);
-        savingsP -= fromSavings2;
-        need -= fromSavings2;
+        if (need > 0 && (otherSavingsP > 0 || isaSavingsP > 0)) {
+          const res2 = global.Utils.spendFromSavings(need, otherSavingsP, isaSavingsP);
+          otherSavingsP = res2.otherP;
+          isaSavingsP = res2.isaP;
+          need = res2.need;
+        }
       }
 
       // If still needed, withdraw from pension applying tax rules
@@ -70,7 +80,7 @@
       pensionP = Math.round(pensionP * addRate(PENSION_GROWTH_RATE));
 
       const pensionEnd = Math.round(pensionP);
-      const savingsEnd = Math.round(savingsP);
+      const savingsEnd = Math.round(otherSavingsP + isaSavingsP);
       timeline[idx] = wealth(age, pensionStart, pensionEnd, savingsStart, savingsEnd, Math.round(taxPaid), Math.round(extra));
     }
     return timeline;

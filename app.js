@@ -67,7 +67,7 @@ const ensureAppReady = (() => {
 
 // Generate a full timeline report (per strategy) with rows for each age from START_AGE to END_AGE
 function generateFullReport(savings, pension, requiredAmounts, adhoc, params) {
-  const { strategyRowTitles, strategyClasses } = getStrategyMeta(params);
+  const { strategyRowTitles, strategyClasses, strategyDescriptions } = getStrategyMeta(params);
   const len = params.END_AGE - params.START_AGE + 1;
 
   const format = (p) => window.Utils.formatGBP(p);
@@ -83,9 +83,10 @@ function generateFullReport(savings, pension, requiredAmounts, adhoc, params) {
     s5: window.Strategies.strategy5(savings, pension, req, adhoc, params),
   }));
 
-  const renderTimelineTable = (title, cssClass, timeline) => {
+  const renderTimelineTable = (title, cssClass, timeline, description) => {
     let html = '';
     html += `<h3 class="${cssClass}">${title}</h3>`;
+    html += `<details class="strategy-desc"><summary>About this strategy</summary><div class="strategy-desc-content">${description}</div></details>`;
     html += `<table class="full-timeline"><thead><tr>
       <th>Age</th>
       <th>Pension Start</th>
@@ -125,16 +126,16 @@ function generateFullReport(savings, pension, requiredAmounts, adhoc, params) {
 
     // Strategy 1..5 and 3A in the same order as meta
     const perStrategy = [
-      { title: strategyRowTitles[0], cls: strategyClasses[0], tl: block.s1 },
-      { title: strategyRowTitles[1], cls: strategyClasses[1], tl: block.s2 },
-      { title: strategyRowTitles[2], cls: strategyClasses[2], tl: block.s3 },
-      { title: strategyRowTitles[3], cls: strategyClasses[3], tl: block.s3a },
-      { title: strategyRowTitles[4], cls: strategyClasses[4], tl: block.s4 },
-      { title: strategyRowTitles[5], cls: strategyClasses[5], tl: block.s5 },
+      { title: strategyRowTitles[0], cls: strategyClasses[0], tl: block.s1, desc: strategyDescriptions[0] },
+      { title: strategyRowTitles[1], cls: strategyClasses[1], tl: block.s2, desc: strategyDescriptions[1] },
+      { title: strategyRowTitles[2], cls: strategyClasses[2], tl: block.s3, desc: strategyDescriptions[2] },
+      { title: strategyRowTitles[3], cls: strategyClasses[3], tl: block.s3a, desc: strategyDescriptions[3] },
+      { title: strategyRowTitles[4], cls: strategyClasses[4], tl: block.s4, desc: strategyDescriptions[4] },
+      { title: strategyRowTitles[5], cls: strategyClasses[5], tl: block.s5, desc: strategyDescriptions[5] },
     ];
 
     for (const row of perStrategy) {
-      html += renderTimelineTable(row.title, row.cls, row.tl);
+      html += renderTimelineTable(row.title, row.cls, row.tl, row.desc);
     }
   }
 
@@ -403,7 +404,20 @@ const handleGenerate = async () => {
   try {
     await ensureAppReady();
 
-    const savings = window.Utils.toPence(el('initialSavings').value || '0');
+    // Read split savings (fallback to single total if split inputs not present)
+    const otherEl = el('initialOtherSavings');
+    const isaEl = el('initialIsaSavings');
+    let otherSavingsP = 0, isaSavingsP = 0, savings = 0;
+    if (otherEl || isaEl) {
+      otherSavingsP = window.Utils.toPence(otherEl?.value || '0');
+      isaSavingsP = window.Utils.toPence(isaEl?.value || '0');
+      savings = otherSavingsP + isaSavingsP;
+    } else {
+      savings = window.Utils.toPence(el('initialSavings').value || '0');
+      otherSavingsP = savings;
+      isaSavingsP = 0;
+    }
+
     const pension = window.Utils.toPence(el('initialPension').value || '0');
 
     const spendingStr = el('spendingAmounts').value || '';
@@ -463,7 +477,20 @@ const handleGenerateFull = async () => {
   try {
     await ensureAppReady();
 
-    const savings = window.Utils.toPence(el('initialSavings').value || '0');
+    // Read split savings (fallback to single total if split inputs not present)
+    const otherEl = el('initialOtherSavings');
+    const isaEl = el('initialIsaSavings');
+    let otherSavingsP = 0, isaSavingsP = 0, savings = 0;
+    if (otherEl || isaEl) {
+      otherSavingsP = window.Utils.toPence(otherEl?.value || '0');
+      isaSavingsP = window.Utils.toPence(isaEl?.value || '0');
+      savings = otherSavingsP + isaSavingsP;
+    } else {
+      savings = window.Utils.toPence(el('initialSavings').value || '0');
+      otherSavingsP = savings; // default priority pool
+      isaSavingsP = 0;
+    }
+
     const pension = window.Utils.toPence(el('initialPension').value || '0');
 
     const spendingStr = el('spendingAmounts').value || '';
@@ -501,6 +528,10 @@ const handleGenerateFull = async () => {
     const params = getParams();
     params.START_AGE = START_AGE;
     params.END_AGE = END_AGE;
+    params.INITIAL_OTHER_SAVINGS_P = otherSavingsP;
+    params.INITIAL_ISA_SAVINGS_P = isaSavingsP;
+    params.INITIAL_OTHER_SAVINGS_P = otherSavingsP;
+    params.INITIAL_ISA_SAVINGS_P = isaSavingsP;
 
     // Validate ages
     for (const a of targetAges) {
@@ -598,6 +629,48 @@ window.addEventListener('DOMContentLoaded', () => {
       document.body.appendChild(fullBtn);
     }
     fullBtn.addEventListener('click', handleGenerateFull);
+  }
+
+  // Add split savings inputs if not already present
+  const initialSavingsEl = el('initialSavings');
+  if (initialSavingsEl && !el('initialOtherSavings') && !el('initialIsaSavings')) {
+    const container = initialSavingsEl.parentNode || document.body;
+
+    const makeInput = (id, placeholder) => {
+      const inp = document.createElement('input');
+      inp.type = 'number';
+      inp.step = '0.01';
+      inp.id = id;
+      inp.placeholder = placeholder;
+      // Copy classes and some styles from the existing savings input for visual consistency
+      inp.className = initialSavingsEl.className || '';
+      const inlineStyle = initialSavingsEl.getAttribute('style');
+      if (inlineStyle) inp.setAttribute('style', inlineStyle);
+      return inp;
+    };
+
+    const otherLabel = document.createElement('label');
+    otherLabel.setAttribute('for', 'initialOtherSavings');
+    otherLabel.textContent = 'Other Savings (£): ';
+    const otherInput = makeInput('initialOtherSavings', 'Other Savings');
+
+    const isaLabel = document.createElement('label');
+    isaLabel.setAttribute('for', 'initialIsaSavings');
+    isaLabel.textContent = 'Stocks & Shares ISA (£): ';
+    const isaInput = makeInput('initialIsaSavings', 'Stocks & Shares ISA');
+
+    // Insert after the existing savings input
+    if (initialSavingsEl.nextSibling) {
+      container.insertBefore(otherLabel, initialSavingsEl.nextSibling);
+      container.insertBefore(otherInput, otherLabel.nextSibling);
+      container.insertBefore(isaLabel, otherInput.nextSibling);
+      container.insertBefore(isaInput, isaLabel.nextSibling);
+    } else {
+      container.appendChild(otherLabel);
+      container.appendChild(otherInput);
+      container.appendChild(isaLabel);
+      container.appendChild(isaInput);
+    }
   }
 
     // Build Additional Information panel on load

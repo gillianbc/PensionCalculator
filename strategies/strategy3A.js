@@ -8,10 +8,13 @@
     const len = END_AGE - START_AGE + 1;
     const timeline = new Array(len);
 
+    let otherSavingsP = params.INITIAL_OTHER_SAVINGS_P || 0;
+    let isaSavingsP = params.INITIAL_ISA_SAVINGS_P || 0;
+
     let age = START_AGE;
     for (let idx = 0; idx < len; idx++, age++) {
       const pensionStart = Math.round(pensionP);
-      const savingsStart = Math.round(savingsP);
+      const savingsStart = Math.round(otherSavingsP + isaSavingsP);
       let taxPaid = 0;
 
       const statePensionIncome = age >= 67 ? STATE_PENSION_P : 0;
@@ -21,12 +24,15 @@
       if (need < 0) need = 0;
 
       // Pay up to £3,600 gross (net £2,880) from savings into pension if age <= 75
-      if (age <= 75 && savingsP > 0) {
+      if (age <= 75 && (otherSavingsP > 0 || isaSavingsP > 0)) {
         const netCap = Math.round(NO_INCOME_CONTRIBUTION_LIMIT_P * (1 - BASIC_RATE)); // 2880
-        const netFromSavings = Math.min(savingsP, netCap);
+        const available = otherSavingsP + isaSavingsP;
+        const netFromSavings = Math.min(available, netCap);
         if (netFromSavings > 0) {
           const gross = Math.round(netFromSavings / (1 - BASIC_RATE));
-          savingsP -= netFromSavings;
+          const w = global.Utils.withdrawFromSavings(netFromSavings, otherSavingsP, isaSavingsP);
+          otherSavingsP = w.otherP;
+          isaSavingsP = w.isaP;
           pensionP += gross;
         }
       }
@@ -74,9 +80,9 @@
         }
       }
 
-      if (need > 0 && savingsP > 0) {
-        const fromSavings = Math.min(need, savingsP);
-        savingsP -= fromSavings; need -= fromSavings; if (need < 0) need = 0;
+      if (need > 0 && (otherSavingsP > 0 || isaSavingsP > 0)) {
+        const resTop = global.Utils.spendFromSavings(need, otherSavingsP, isaSavingsP);
+        otherSavingsP = resTop.otherP; isaSavingsP = resTop.isaP; need = resTop.need; if (need < 0) need = 0;
       }
 
       pensionP = Math.round(pensionP * addRate(PENSION_GROWTH_RATE));

@@ -9,10 +9,13 @@
     const len = END_AGE - START_AGE + 1;
     const timeline = new Array(len);
 
+    let otherSavingsP = params.INITIAL_OTHER_SAVINGS_P || 0;
+    let isaSavingsP = params.INITIAL_ISA_SAVINGS_P || 0;
+
     let age = START_AGE;
     for (let idx = 0; idx < len; idx++, age++) {
       const pensionStart = Math.round(pensionP);
-      const savingsStart = Math.round(savingsP);
+      const savingsStart = Math.round(otherSavingsP + isaSavingsP);
       let taxPaid = 0;
 
       const statePensionIncome = age >= 67 ? STATE_PENSION_P : 0;
@@ -21,10 +24,13 @@
       let need = requiredNetP + extra - statePensionIncome;
       if (need < 0) need = 0;
 
-      // Use savings first
-      const fromSavings = Math.min(need, savingsP);
-      savingsP -= fromSavings;
-      need -= fromSavings;
+      // Use savings first (Other then ISA)
+      if (need > 0 && (otherSavingsP > 0 || isaSavingsP > 0)) {
+        const res = global.Utils.spendFromSavings(need, otherSavingsP, isaSavingsP);
+        otherSavingsP = res.otherP;
+        isaSavingsP = res.isaP;
+        need = res.need;
+      }
 
       if (need > 0 && pensionP > 0) {
         let allowanceLeft = PERSONAL_ALLOWANCE_P - statePensionIncome;
@@ -59,7 +65,7 @@
       pensionP = Math.round(pensionP * addRate(PENSION_GROWTH_RATE));
 
       const pensionEnd = Math.round(pensionP);
-      const savingsEnd = Math.round(savingsP);
+      const savingsEnd = Math.round(otherSavingsP + isaSavingsP);
       timeline[idx] = wealth(age, pensionStart, pensionEnd, savingsStart, savingsEnd, Math.round(taxPaid), Math.round(extra));
     }
     return timeline;
