@@ -23,5 +23,6 @@ TODO
 ----
 Graphs!  
 
-Since I can put savings into Stocks and Shares ISA, which I expect to perform better than inflation, i.e. comparable with SIPP, I should configure an interest rate on the amount that is in my ISA savings.  I can only add £20000 per year to ISA.  
+
+Since I can put savings into Stocks and Shares ISA, which I expect to perform better than inflation, i.e. comparable with SIPP, I should configure an interest rate on the amount that is in my ISA savings at the same rate a pensions.  I can only add £20000 per year to ISA.  This will affect the strategy where I take the full 25% lump sum as I can put £20K of that into ISAs each year.
 

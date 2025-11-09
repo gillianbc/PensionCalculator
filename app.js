@@ -182,7 +182,9 @@ function getStrategyMeta(params) {
       e.g. if I need £25K, then take £16760 from pension and £8240 from savings.
       When I reach age 67, I'll have state pension income, currently £${params.STATE_PENSION_P/100}, so I'd crystallise less to 
       keep below tax threshold and start using more from savings to meet my spending needs.  
-      Once savings depleted, I'll need to increase what I crystallise each year and will have to pay tax`,
+      Once savings depleted, I'll need to increase what I crystallise each year and will have to pay tax
+      Bear in mind that the withdrawals need to be made monthly to avoid getting over taxed and having to claim it back
+      `,
 
       "4. Same as Strategy 3, plus annual £3,600 gross contribution (net £2,880 with 20% relief) at ages ≤ 75.  " +
       "i.e. you can continue contributing to a pension, even when you are drawing down from it and have no salary." +
