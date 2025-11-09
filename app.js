@@ -585,6 +585,12 @@ window.addEventListener('DOMContentLoaded', () => {
     fullBtn.type = 'button';
     fullBtn.textContent = 'Generate Full Report';
     const downloadBtnEl = el('downloadBtn');
+    // Copy classes and inline style from Download button so it matches existing styling
+    if (downloadBtnEl) {
+      fullBtn.className = downloadBtnEl.className || '';
+      const inlineStyle = downloadBtnEl.getAttribute('style');
+      if (inlineStyle) fullBtn.setAttribute('style', inlineStyle);
+    }
     if (downloadBtnEl && downloadBtnEl.parentNode) {
       downloadBtnEl.parentNode.insertBefore(fullBtn, downloadBtnEl.nextSibling);
     } else {
