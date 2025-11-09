@@ -30,12 +30,15 @@
         need = res.need;
       }
 
-      // One-time lump sum: configurable tax-free portion of pension into savings if still needed
-      if (need > 0 && !lumpSumTaken && pensionP > 0) {
+      // One-time lump sum when savings are depleted: allocate 20K to ISA and the balance to Other Savings
+      if (need > 0 && !lumpSumTaken && pensionP > 0 && otherSavingsP <= 0 && isaSavingsP <= 0) {
         const lump = Math.round(pensionP * (typeof params.TAX_FREE_PORTION === 'number' ? params.TAX_FREE_PORTION : 0.25));
         pensionP -= lump;
-        // Add lump sum to Other Savings by default
-        otherSavingsP += lump;
+
+        const isaTopUp = Math.min(20000, lump);
+        isaSavingsP += isaTopUp;
+        otherSavingsP += (lump - isaTopUp);
+
         lumpSumTaken = true;
 
         if (need > 0 && (otherSavingsP > 0 || isaSavingsP > 0)) {
