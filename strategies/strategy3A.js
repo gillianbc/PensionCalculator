@@ -15,6 +15,8 @@
     for (let idx = 0; idx < len; idx++, age++) {
       const pensionStart = Math.round(pensionP);
       const savingsStart = Math.round(otherSavingsP + isaSavingsP);
+      const isaStart = Math.round(isaSavingsP);
+      const otherStart = Math.round(otherSavingsP);
       let taxPaid = 0;
 
       const statePensionIncome = age >= 67 ? STATE_PENSION_P : 0;
@@ -87,7 +89,11 @@
 
       pensionP = Math.round(pensionP * addRate(PENSION_GROWTH_RATE));
 
-      timeline[idx] = wealth(age, Math.round(pensionStart), Math.round(pensionP), Math.round(savingsStart), Math.round(savingsP), Math.round(taxPaid), Math.round(extra));
+      const pensionEnd = Math.round(pensionP);
+      const savingsEnd = Math.round(otherSavingsP + isaSavingsP);
+      const isaEnd = Math.round(isaSavingsP);
+      const otherEnd = Math.round(otherSavingsP);
+      timeline[idx] = wealth(age, Math.round(pensionStart), pensionEnd, Math.round(savingsStart), savingsEnd, Math.round(taxPaid), Math.round(extra), isaStart, isaEnd, otherStart, otherEnd);
     }
 
     return timeline;

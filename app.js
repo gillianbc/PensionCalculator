@@ -91,8 +91,10 @@ function generateFullReport(savings, pension, requiredAmounts, adhoc, params) {
       <th>Age</th>
       <th>Pension Start</th>
       <th>Pension End</th>
-      <th>Savings Start</th>
-      <th>Savings End</th>
+      <th>ISA Start</th>
+      <th>ISA End</th>
+      <th>Other Start</th>
+      <th>Other End</th>
       <th>Tax Paid</th>
       <th>Extra This Year</th>
     </tr></thead><tbody>`;
@@ -102,8 +104,10 @@ function generateFullReport(savings, pension, requiredAmounts, adhoc, params) {
         <td>${w.age}</td>
         <td class="currency">${format(w.pensionStart)}</td>
         <td class="currency">${format(w.pensionEnd)}</td>
-        <td class="currency">${format(w.savingsStart)}</td>
-        <td class="currency">${format(w.savingsEnd)}</td>
+        <td class="currency">${format(w.isaStart)}</td>
+        <td class="currency">${format(w.isaEnd)}</td>
+        <td class="currency">${format(w.otherStart)}</td>
+        <td class="currency">${format(w.otherEnd)}</td>
         <td class="currency">${format(w.taxPaid)}</td>
         <td class="currency">${format(w.extraThisYear)}</td>
       </tr>`;
@@ -115,7 +119,7 @@ function generateFullReport(savings, pension, requiredAmounts, adhoc, params) {
   let html = '';
   html += `<div class="summary-block">
     <h3>Full Timeline Report</h3>
-    <p><strong>Initial Savings:</strong> ${format(savings)}</p>
+    <p><strong>Initial Savings:</strong> ${format((params.INITIAL_OTHER_SAVINGS_P || 0) + (params.INITIAL_ISA_SAVINGS_P || 0))}</p>
     <p><strong>Initial Pension:</strong> ${format(pension)}</p>
     <p><strong>Annual Spending Amounts:</strong> ${requiredAmounts.map(format).join(', ')}</p>
     <p><strong>Years:</strong> ${params.START_AGE}–${params.END_AGE}</p>

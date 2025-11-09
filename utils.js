@@ -21,8 +21,20 @@
   const addRate = (rate) => 1 + rate;
 
   // Data structure for a year snapshot
-  const wealth = (age, pensionStart, pensionEnd, savingsStart, savingsEnd, taxPaid, extraThisYear) => ({
-    age, pensionStart, pensionEnd, savingsStart, savingsEnd, taxPaid, extraThisYear,
+  // Backwards compatible: last four params default to 0 so old callers still work.
+  const wealth = (age, pensionStart, pensionEnd, savingsStart, savingsEnd, taxPaid, extraThisYear, isaStart = 0, isaEnd = 0, otherStart = 0, otherEnd = 0) => ({
+    age,
+    pensionStart,
+    pensionEnd,
+    savingsStart,
+    savingsEnd,
+    taxPaid,
+    extraThisYear,
+    // New detailed savings breakdown
+    isaStart,
+    isaEnd,
+    otherStart,
+    otherEnd,
     totalEnd() { return this.pensionEnd + this.savingsEnd; }
   });
 

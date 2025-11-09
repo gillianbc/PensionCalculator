@@ -38,7 +38,7 @@
         <h2>Inputs</h2>
         <form id="inputs-form">
             <div class="grid-2">
-                <div class="form-group">
+                <div class="form-group" style="display:none;">
                     <label for="initialSavings">
                         Initial Savings (£)
                         <span class="tooltip-container">
@@ -57,6 +57,18 @@
                         </span>
                     </label>
                     <input id="initialPension" type="text" inputmode="decimal" placeholder="425000.00" value="500000"/>
+                </div>
+            </div>
+
+            <!-- Visible per-pool savings inputs -->
+            <div class="grid-2">
+                <div class="form-group">
+                    <label for="otherSavings">Other Savings (£):</label>
+                    <input id="otherSavings" type="text" inputmode="decimal" placeholder="Other Savings" value="60000"/>
+                </div>
+                <div class="form-group">
+                    <label for="isaSavings">Stocks & Shares ISA (£):</label>
+                    <input id="isaSavings" type="text" inputmode="decimal" placeholder="Stocks & Shares ISA" value="20000"/>
                 </div>
             </div>
 
@@ -208,5 +220,52 @@
 </div>
 
 <script src="app.js"></script>Fz
+<script>
+  // Ensure only two visible inputs are used: Other and ISA.
+  // Set defaults (Other=60000, ISA=20000) and keep hidden Initial Savings = Other + ISA.
+  (function(){
+    function byId(id){ return document.getElementById(id); }
+    function parseNum(s){ if(!s) return 0; const n = Number(String(s).replace(/[^0-9.\-]/g,'')); return isNaN(n)?0:n; }
+    function updateTotal(){
+      const other = byId('otherSavings');
+      const isa = byId('isaSavings');
+      const total = byId('initialSavings');
+      if (other && isa && total) {
+        const sum = parseNum(other.value) + parseNum(isa.value);
+        total.value = String(sum);
+      }
+    }
+    function init(){
+      // Hide the Initial Savings group if still visible
+      const label = document.querySelector('label[for="initialSavings"]');
+      const fg = label ? label.closest('.form-group') : null;
+      if (fg) { fg.style.display = 'none'; }
+
+      const other = byId('otherSavings');
+      const isa = byId('isaSavings');
+      if (other && isa) {
+        if (!other.value) other.value = '60000';
+        if (!isa.value) isa.value = '20000';
+        other.addEventListener('input', updateTotal);
+        isa.addEventListener('input', updateTotal);
+        updateTotal();
+        return true;
+      }
+      return false;
+    }
+    function waitForFields(){
+      if (init()) return;
+      let count = 0, tries = 50;
+      const t = setInterval(() => {
+        if (init() || ++count >= tries) clearInterval(t);
+      }, 100);
+    }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', waitForFields);
+    } else {
+      waitForFields();
+    }
+  })();
+</script>
 </body>
 </html>

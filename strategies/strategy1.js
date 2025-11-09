@@ -7,13 +7,16 @@
     const timeline = new Array(len);
     let lumpSumTaken = false;
 
-    let otherSavingsP = params.INITIAL_OTHER_SAVINGS_P || 0;
-    let isaSavingsP = params.INITIAL_ISA_SAVINGS_P || 0;
+    // Defaults are in pence; fallback to £60,000 and £20,000 respectively
+    let otherSavingsP = (typeof params.INITIAL_OTHER_SAVINGS_P === 'number' ? params.INITIAL_OTHER_SAVINGS_P : 6000000);
+    let isaSavingsP = (typeof params.INITIAL_ISA_SAVINGS_P === 'number' ? params.INITIAL_ISA_SAVINGS_P : 2000000);
 
     let age = START_AGE;
     for (let idx = 0; idx < len; idx++, age++) {
       const pensionStart = Math.round(pensionP);
       const savingsStart = Math.round(otherSavingsP + isaSavingsP);
+      const isaStart = Math.round(isaSavingsP);
+      const otherStart = Math.round(otherSavingsP);
       let taxPaid = 0;
 
       const statePensionIncome = age >= 67 ? STATE_PENSION_P : 0;
@@ -21,6 +24,19 @@
 
       let need = requiredNetP + extra - statePensionIncome;
       if (need < 0) need = 0;
+
+      // One-time pension lump sum at start: allocate up to £20k to ISA, rest to Other
+      if (!lumpSumTaken && pensionP > 0) {
+        const lump = Math.round(pensionP * (typeof params.TAX_FREE_PORTION === 'number' ? params.TAX_FREE_PORTION : 0.25));
+        pensionP -= lump;
+
+        // 20,000 pounds = 2,000,000 pence
+        const isaTopUp = Math.min(2000000, lump);
+        isaSavingsP += isaTopUp;
+        otherSavingsP += (lump - isaTopUp);
+
+        lumpSumTaken = true;
+      }
 
       // Use savings first (Other then ISA)
       if (need > 0 && (otherSavingsP > 0 || isaSavingsP > 0)) {
@@ -35,7 +51,8 @@
         const lump = Math.round(pensionP * (typeof params.TAX_FREE_PORTION === 'number' ? params.TAX_FREE_PORTION : 0.25));
         pensionP -= lump;
 
-        const isaTopUp = Math.min(20000, lump);
+        // 20,000 pounds = 2,000,000 pence
+        const isaTopUp = Math.min(2000000, lump);
         isaSavingsP += isaTopUp;
         otherSavingsP += (lump - isaTopUp);
 
@@ -84,7 +101,9 @@
 
       const pensionEnd = Math.round(pensionP);
       const savingsEnd = Math.round(otherSavingsP + isaSavingsP);
-      timeline[idx] = wealth(age, pensionStart, pensionEnd, savingsStart, savingsEnd, Math.round(taxPaid), Math.round(extra));
+      const isaEnd = Math.round(isaSavingsP);
+      const otherEnd = Math.round(otherSavingsP);
+      timeline[idx] = wealth(age, pensionStart, pensionEnd, savingsStart, savingsEnd, Math.round(taxPaid), Math.round(extra), isaStart, isaEnd, otherStart, otherEnd);
     }
     return timeline;
   }
